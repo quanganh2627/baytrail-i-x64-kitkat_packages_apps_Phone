@@ -317,9 +317,6 @@ public class MobileNetworkSettings extends PreferenceActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if ((mRoamingDialog != null) && mRoamingDialog.isShowing()) {
-            mRoamingDialog.dismiss();
-        }
     }
 
     /**
