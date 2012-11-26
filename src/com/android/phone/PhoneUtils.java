@@ -60,6 +60,7 @@ import com.android.internal.telephony.TelephonyCapabilities;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.cdma.CdmaConnection;
 import com.android.internal.telephony.sip.SipPhone;
+import com.intel.internal.telephony.OemTelephony.OemTelephonyConstants;
 
 import java.util.ArrayList;
 import java.util.Arrays;
