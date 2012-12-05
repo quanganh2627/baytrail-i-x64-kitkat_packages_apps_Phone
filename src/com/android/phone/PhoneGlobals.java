@@ -34,6 +34,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncResult;
@@ -70,6 +71,9 @@ import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.cdma.TtyIntent;
 import com.android.phone.OtaUtils.CdmaOtaScreenState;
 import com.android.server.sip.SipService;
+
+import dalvik.system.DexClassLoader;
+import java.lang.reflect.Constructor;
 
 /**
  * Global state for the telephony subsystem when running in the primary
@@ -459,6 +463,31 @@ public class PhoneGlobals extends ContextWrapper
             notificationMgr = NotificationMgr.init(this);
 
             phoneMgr = PhoneInterfaceManager.init(this, phone);
+
+            try {
+                if (getResources().getBoolean(R.bool.config_usage_oem_hooks_supported)) {
+                    if (DBG) {
+                        Log.d(LOG_TAG, "**********************************"
+                                + " OEMHookInterfaceCreator loading *****************"
+                                + "*********************************************");
+                    }
+                    DexClassLoader classLoader = new DexClassLoader(
+                            getResources().getString(R.string.config_oem_hook_jar_file),
+                            new ContextWrapper(phone.getContext()).getCacheDir().getAbsolutePath(),
+                            null, ClassLoader.getSystemClassLoader());
+                    classLoader.loadClass( getResources().getString(
+                            R.string.config_oem_hook_class_name)).getConstructor().newInstance();
+                } else {
+                    if (DBG) Log.d(LOG_TAG, "#######################################"
+                            + " NO OEM Hooks ############################################");
+                }
+            } catch (Resources.NotFoundException ex) {
+                Log.e(LOG_TAG, "Resource reading Failed!");
+            } catch (ClassNotFoundException ex) {
+                Log.e(LOG_TAG, "OEM Hook class loading failed");
+            } catch (Exception ex) {
+                Log.e(LOG_TAG, "OEM Hook class creation Failed!");
+            }
 
             mHandler.sendEmptyMessage(EVENT_START_SIP_SERVICE);
 
