@@ -23,6 +23,7 @@ import android.graphics.drawable.LayerDrawable;
 import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -104,6 +105,9 @@ public class InCallTouchUi extends FrameLayout
     private ViewGroup mCdmaMergeButton;
     private ViewGroup mManageConferenceButton;
     private ImageButton mManageConferenceButtonImage;
+
+    private ViewGroup mEndAllCallsButton;
+    private ImageButton mEndAllCallsButtonImage;
 
     // "Audio mode" PopupMenu
     private PopupMenu mAudioModePopup;
@@ -213,6 +217,13 @@ public class InCallTouchUi extends FrameLayout
             mEndButton.setOnTouchListener(new SmallerHitTargetTouchListener());
         }
 
+        // The mEndAllCallsButton button is actually layout containing an icon and a text
+        // label side-by-side.
+        mEndAllCallsButton =
+                (ViewGroup) mInCallControls.findViewById(R.id.endAllCallsButton);
+        if (mEndAllCallsButton != null) mEndAllCallsButton.setOnClickListener(this);
+        mEndAllCallsButtonImage =
+                (ImageButton) mInCallControls.findViewById(R.id.endAllCallsButtonImage);
     }
 
     /**
@@ -385,6 +396,7 @@ public class InCallTouchUi extends FrameLayout
             case R.id.swapButton:
             case R.id.cdmaMergeButton:
             case R.id.manageConferenceButton:
+            case R.id.endAllCallsButton:
                 // Clicks on the regular onscreen buttons get forwarded
                 // straight to the InCallScreen.
                 mInCallScreen.handleOnscreenButtonClick(id);
@@ -601,6 +613,24 @@ public class InCallTouchUi extends FrameLayout
                 (phoneType == PhoneConstants.PHONE_TYPE_CDMA) && inCallControlState.canMerge;
         final boolean showExtraButtonRow =
                 showCdmaMerge || inCallControlState.manageConferenceVisible;
+
+        // Check "persist.conformance", "End all calls" (used only on GSM devices)
+        // This button and its label are shown or hidden together.
+        if ("true".equals(SystemProperties.get("persist.conformance"))
+                && phoneType == PhoneConstants.PHONE_TYPE_GSM
+                && inCallControlState.canEndAllCalls) {
+            if (mEndAllCallsButton != null) {
+                mEndAllCallsButton.setVisibility(View.VISIBLE);
+            }
+            if (mEndAllCallsButtonImage != null) {
+                mEndAllCallsButtonImage.setEnabled(true);
+            }
+        } else {
+            if (mEndAllCallsButton != null) {
+                mEndAllCallsButton.setVisibility(View.GONE);
+            }
+        }
+
         if (showExtraButtonRow && !inCallControlState.dialpadVisible) {
             // This will require the ViewStub inflate itself.
             mExtraButtonRow.setVisibility(View.VISIBLE);
@@ -658,6 +688,7 @@ public class InCallTouchUi extends FrameLayout
         log(" - cdmaMerge: " + getButtonState(mCdmaMergeButton));
         log(" - swap: " + getButtonState(mSwapButton));
         log(" - manageConferenceButton: " + getButtonState(mManageConferenceButton));
+        log(" - endAllCallsButton: " + getButtonState(mEndAllCallsButton));
     }
 
     private static String getButtonState(View view) {

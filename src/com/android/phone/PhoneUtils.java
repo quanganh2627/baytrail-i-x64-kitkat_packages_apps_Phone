@@ -490,6 +490,15 @@ public class PhoneUtils {
         }
     }
 
+    static void hangupAll(Phone phone) {
+        if (phone == null)
+            return ;
+        String[] request = new String[1];
+        request[0] = Integer.toString(
+                OemTelephonyConstants.RIL_OEM_HOOK_STRING_RELEASE_ALL_CALLS);
+        phone.invokeOemRilRequestStrings(request, null);
+    }
+
     static boolean answerAndEndHolding(CallManager cm, Call ringing) {
         if (DBG) log("end holding & answer waiting: 1");
         if (!hangupHoldingCall(cm.getFirstActiveBgCall())) {
