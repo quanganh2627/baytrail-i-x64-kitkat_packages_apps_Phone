@@ -60,6 +60,7 @@ import com.android.internal.telephony.TelephonyCapabilities;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.cdma.CdmaConnection;
 import com.android.internal.telephony.sip.SipPhone;
+import com.intel.internal.telephony.OemTelephony.OemTelephonyConstants;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -477,6 +478,15 @@ public class PhoneUtils {
         } catch (CallStateException ex) {
             Log.w(LOG_TAG, "Connection hangup: caught " + ex, ex);
         }
+    }
+
+    static void hangupAll(Phone phone) {
+        if (phone == null)
+            return ;
+        String[] request = new String[1];
+        request[0] = Integer.toString(
+                OemTelephonyConstants.RIL_OEM_HOOK_STRING_RELEASE_ALL_CALLS);
+        phone.invokeOemRilRequestStrings(request, null);
     }
 
     static boolean answerAndEndHolding(CallManager cm, Call ringing) {

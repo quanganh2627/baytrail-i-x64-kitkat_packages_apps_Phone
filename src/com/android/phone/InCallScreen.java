@@ -2992,6 +2992,10 @@ public class InCallScreen extends Activity
                 requestUpdateScreen();
                 break;
 
+            case R.id.endAllCallsButton:
+                PhoneUtils.hangupAll(mPhone);
+                break;
+
             default:
                 Log.w(LOG_TAG, "handleOnscreenButtonClick: unexpected ID " + id);
                 break;

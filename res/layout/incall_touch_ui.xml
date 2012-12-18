@@ -58,6 +58,26 @@
                       android:layout_height="wrap_content"
                       android:layout_alignParentBottom="true">
 
+            <!-- "End all calls" -->
+            <!-- This button is used only on GSM devices, during multiple calls -->
+            <LinearLayout android:id="@+id/endAllCallsButton"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?android:attr/selectableItemBackground">
+                <!-- The entire LinearLayout here is clickable, so we don't
+                care about clicks on the ImageButton itself. -->
+                <ImageButton android:id="@+id/endAllCallsButtonImage"
+                    android:clickable="false"
+                    style="@style/InCallExtraRowButton"
+                    android:src="@drawable/ic_dial_end_call"
+                    android:contentDescription="@string/onscreenEndAllCallsText" />
+                <TextView android:id="@+id/endAllCallsButtonLabel"
+                    style="@style/InCallExtraRowButtonLabel"
+                    android:text="@string/onscreenEndAllCallsText" />
+            </LinearLayout>
+
+
             <!-- Row 1, the "extra button row": A couple of relatively rare
                  buttons used only in certain call states.
                  Most of the time this whole row is GONE.
