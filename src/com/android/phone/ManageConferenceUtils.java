@@ -246,9 +246,11 @@ public class ManageConferenceUtils {
                         }
                     };
                 separateButton.setOnClickListener(separateThisConnection);
+                separateButton.setEnabled(true);
                 separateButton.setVisibility(View.VISIBLE);
             } else {
-                separateButton.setVisibility(View.INVISIBLE);
+                separateButton.setEnabled(false);
+                separateButton.setVisibility(View.VISIBLE);
             }
 
             // Name/number for this caller.
