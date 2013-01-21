@@ -1084,8 +1084,18 @@ public class NotificationMgr implements CallerInfoAsyncQuery.OnQueryCompleteList
                 //
                 // TODO: there should be a cleaner way of avoiding this
                 // problem (see discussion in bug 3184149.)
+                // Add a condition "ringingCall.getState() == Call.State.INCOMING"
+                // because we find a case that need cancel the notification when there
+                // is a new incoming call.
+                // Case:
+                // 1.BT HSP (8k) is paired and connected to the handset.
+                // 2: Launch the voice recording application (e.g. PSI Recorder).
+                // 3: Press the Bluetooth Button to route audio to BT HSP.
+                // 4: Receive a MT Voice call.
                 Call ringingCall = mCM.getFirstActiveRingingCall();
-                if ((ringingCall.getState() == Call.State.WAITING) && !mApp.isShowingCallScreen()) {
+                if ((ringingCall.getState() == Call.State.WAITING
+                        || ringingCall.getState() == Call.State.INCOMING)
+                        && !mApp.isShowingCallScreen()) {
                     Log.i(LOG_TAG, "updateInCallNotification: call-waiting! force relaunch...");
                     // Cancel the IN_CALL_NOTIFICATION immediately before
                     // (re)posting it; this seems to force the
