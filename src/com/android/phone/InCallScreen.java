@@ -451,7 +451,6 @@ public class InCallScreen extends Activity
         }
 
         mApp = PhoneGlobals.getInstance();
-        mApp.setInCallScreenInstance(this);
 
         // set this flag so this activity will stay in front of the keyguard
         int flags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
@@ -501,6 +500,8 @@ public class InCallScreen extends Activity
         initInCallScreen();
 
         registerForPhoneStates();
+
+        mApp.setInCallScreenInstance(this);
 
         // No need to change wake state here; that happens in onResume() when we
         // are actually displayed.
