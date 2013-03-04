@@ -17,17 +17,14 @@
 package com.android.phone;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.os.AsyncResult;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.CheckBoxPreference;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneConstants;
 
 public class Use2GOnlyCheckBoxPreference extends CheckBoxPreference {
     private static final String LOG_TAG = "Use2GOnlyCheckBoxPreference";
@@ -35,7 +32,6 @@ public class Use2GOnlyCheckBoxPreference extends CheckBoxPreference {
 
     private Phone mPhone;
     private MyHandler mHandler;
-    private Context mContext;
 
     public Use2GOnlyCheckBoxPreference(Context context) {
         this(context, null);
@@ -47,7 +43,6 @@ public class Use2GOnlyCheckBoxPreference extends CheckBoxPreference {
 
     public Use2GOnlyCheckBoxPreference(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
-        mContext = context;
         mPhone = PhoneGlobals.getPhone();
         mHandler = new MyHandler();
         mPhone.getPreferredNetworkType(
@@ -59,20 +54,11 @@ public class Use2GOnlyCheckBoxPreference extends CheckBoxPreference {
         super.onClick();
 
         int networkType = isChecked() ? Phone.NT_MODE_GSM_ONLY : Phone.NT_MODE_WCDMA_PREF;
-        if (mPhone.getState() == PhoneConstants.State.IDLE) {
-            Log.i(LOG_TAG, "set preferred network type=" + networkType);
-            android.provider.Settings.Global.putInt(mPhone.getContext().getContentResolver(),
-                    android.provider.Settings.Global.PREFERRED_NETWORK_MODE, networkType);
-            mPhone.setPreferredNetworkType(networkType,
-                    mHandler.obtainMessage(MyHandler.MESSAGE_SET_PREFERRED_NETWORK_TYPE));
-            // Disable the setting till we get a response.
-            setEnabled(false);
-        } else {
-            Toast message = Toast.makeText(mContext,
-                    mContext.getResources().getText(R.string.rat_not_allowed), Toast.LENGTH_SHORT);
-            message.show();
-            setChecked(networkType != Phone.NT_MODE_GSM_ONLY);
-        }
+        Log.i(LOG_TAG, "set preferred network type="+networkType);
+        android.provider.Settings.Global.putInt(mPhone.getContext().getContentResolver(),
+                android.provider.Settings.Global.PREFERRED_NETWORK_MODE, networkType);
+        mPhone.setPreferredNetworkType(networkType, mHandler
+                .obtainMessage(MyHandler.MESSAGE_SET_PREFERRED_NETWORK_TYPE));
    }
 
     private class MyHandler extends Handler {
