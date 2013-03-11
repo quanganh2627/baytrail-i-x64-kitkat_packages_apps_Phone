@@ -17,9 +17,6 @@
 package com.android.phone;
 
 import android.content.Context;
-import android.content.BroadcastReceiver;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Debug;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -45,8 +42,6 @@ public class CallTime extends Handler {
 
     private static int sProfileState = PROFILE_STATE_NONE;
 
-    private static boolean screenOn = true;
-
     private Call mCall;
     private long mLastReportedTime;
     private boolean mTimerRunning;
@@ -54,28 +49,13 @@ public class CallTime extends Handler {
     private PeriodicTimerCallback mTimerCallback;
     private OnTickListener mListener;
 
-    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
-                screenOn = false;
-            } else if (Intent.ACTION_SCREEN_ON.equals(intent.getAction())) {
-                screenOn = true;
-            }
-        }
-    };
-
     interface OnTickListener {
         void onTickForCallTimeElapsed(long timeElapsed);
     }
 
-    public CallTime(OnTickListener listener, Context context) {
+    public CallTime(OnTickListener listener) {
         mListener = listener;
         mTimerCallback = new PeriodicTimerCallback();
-
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-        intentFilter.addAction(Intent.ACTION_SCREEN_ON);
-        context.registerReceiver(mBroadcastReceiver, intentFilter);
     }
 
     /**
@@ -187,13 +167,9 @@ public class CallTime extends Handler {
             if (PROFILE && isTraceRunning()) {
                 stopTrace();
             }
-            if (screenOn) {
-                if (DBG) log("SCREEN ON...");
-                mTimerRunning = false;
-                periodicUpdateTimer();
-            } else {
-                mTimerRunning = false;
-            }
+
+            mTimerRunning = false;
+            periodicUpdateTimer();
         }
     }
 

@@ -451,6 +451,7 @@ public class InCallScreen extends Activity
         }
 
         mApp = PhoneGlobals.getInstance();
+        mApp.setInCallScreenInstance(this);
 
         // set this flag so this activity will stay in front of the keyguard
         int flags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
@@ -500,8 +501,6 @@ public class InCallScreen extends Activity
         initInCallScreen();
 
         registerForPhoneStates();
-
-        mApp.setInCallScreenInstance(this);
 
         // No need to change wake state here; that happens in onResume() when we
         // are actually displayed.
@@ -2983,10 +2982,6 @@ public class InCallScreen extends Activity
                 requestUpdateScreen();
                 break;
 
-            case R.id.endAllCallsButton:
-                PhoneUtils.hangupAll(mPhone);
-                break;
-
             default:
                 Log.w(LOG_TAG, "handleOnscreenButtonClick: unexpected ID " + id);
                 break;
@@ -3970,14 +3965,8 @@ public class InCallScreen extends Activity
         // We can also dial while in ALERTING state because there are
         // some connections that never update to an ACTIVE state (no
         // indication from the network).
-
-        // In-band tones are available even before the ALERTING state.
-        // User should be provided with the option of skipping the
-        // in-band tones. So, Dialpad should be shown even in the
-        // DIALING state.
         boolean canDial =
-            (fgCallState == Call.State.DIALING || fgCallState == Call.State.ACTIVE
-                || fgCallState == Call.State.ALERTING)
+            (fgCallState == Call.State.ACTIVE || fgCallState == Call.State.ALERTING)
             && !hasRingingCall
             && (mApp.inCallUiState.inCallScreenMode != InCallScreenMode.MANAGE_CONFERENCE);
 
