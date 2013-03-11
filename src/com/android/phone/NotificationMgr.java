@@ -1084,8 +1084,18 @@ public class NotificationMgr implements CallerInfoAsyncQuery.OnQueryCompleteList
                 //
                 // TODO: there should be a cleaner way of avoiding this
                 // problem (see discussion in bug 3184149.)
+                // Add a condition "ringingCall.getState() == Call.State.INCOMING"
+                // because we find a case that need cancel the notification when there
+                // is a new incoming call.
+                // Case:
+                // 1.BT HSP (8k) is paired and connected to the handset.
+                // 2: Launch the voice recording application (e.g. PSI Recorder).
+                // 3: Press the Bluetooth Button to route audio to BT HSP.
+                // 4: Receive a MT Voice call.
                 Call ringingCall = mCM.getFirstActiveRingingCall();
-                if ((ringingCall.getState() == Call.State.WAITING) && !mApp.isShowingCallScreen()) {
+                if ((ringingCall.getState() == Call.State.WAITING
+                        || ringingCall.getState() == Call.State.INCOMING)
+                        && !mApp.isShowingCallScreen()) {
                     Log.i(LOG_TAG, "updateInCallNotification: call-waiting! force relaunch...");
                     // Cancel the IN_CALL_NOTIFICATION immediately before
                     // (re)posting it; this seems to force the
@@ -1277,17 +1287,12 @@ public class NotificationMgr implements CallerInfoAsyncQuery.OnQueryCompleteList
                     .setSound(ringtoneUri);
             Notification notification = builder.getNotification();
 
-            String vibrateWhen = prefs.getString(
-                    CallFeaturesSetting.BUTTON_VOICEMAIL_NOTIFICATION_VIBRATE_WHEN_KEY, "never");
-            boolean vibrateAlways = vibrateWhen.equals("always");
-            boolean vibrateSilent = vibrateWhen.equals("silent");
-            AudioManager audioManager =
-                    (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
-            boolean nowSilent = audioManager.getRingerMode() == AudioManager.RINGER_MODE_VIBRATE;
-            if (vibrateAlways || (vibrateSilent && nowSilent)) {
+            CallFeaturesSetting.migrateVoicemailVibrationSettingsIfNeeded(prefs);
+            final boolean vibrate = prefs.getBoolean(
+                    CallFeaturesSetting.BUTTON_VOICEMAIL_NOTIFICATION_VIBRATE_KEY, false);
+            if (vibrate) {
                 notification.defaults |= Notification.DEFAULT_VIBRATE;
             }
-
             notification.flags |= Notification.FLAG_NO_CLEAR;
             configureLedNotification(notification);
             mNotificationManager.notify(VOICEMAIL_NOTIFICATION, notification);

@@ -21,11 +21,9 @@ import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.bluetooth.IBluetoothHeadsetPhone;
 import android.content.ActivityNotFoundException;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -34,13 +32,10 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.net.sip.SipManager;
 import android.os.AsyncResult;
-import android.os.AsyncTask;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.SystemProperties;
-import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
@@ -58,7 +53,6 @@ import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CallerInfo;
 import com.android.internal.telephony.CallerInfoAsyncQuery;
 import com.android.internal.telephony.Connection;
-import com.android.internal.telephony.IExtendedNetworkService;
 import com.android.internal.telephony.MmiCode;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConstants;
@@ -66,8 +60,10 @@ import com.android.internal.telephony.TelephonyCapabilities;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.cdma.CdmaConnection;
 import com.android.internal.telephony.sip.SipPhone;
+import com.intel.internal.telephony.OemTelephony.OemTelephonyConstants;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
@@ -115,11 +111,6 @@ public class PhoneUtils {
 
     /** Define for not a special CNAP string */
     private static final int CNAP_SPECIAL_CASE_NO = -1;
-
-    // Extended network service interface instance
-    private static IExtendedNetworkService mNwService = null;
-    // used to cancel MMI command after 15 seconds timeout for NWService requirement
-    private static Message mMmiTimeoutCbMsg = null;
 
     /** Noise suppression status as selected by user */
     private static boolean sIsNoiseSuppressionEnabled = true;
@@ -200,19 +191,6 @@ public class PhoneUtils {
         }
     }
 
-
-    private static ServiceConnection ExtendedNetworkServiceConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName name, IBinder iBinder) {
-            if (DBG) log("Extended NW onServiceConnected");
-            mNwService = IExtendedNetworkService.Stub.asInterface(iBinder);
-        }
-
-        public void onServiceDisconnected(ComponentName arg0) {
-            if (DBG) log("Extended NW onServiceDisconnected");
-            mNwService = null;
-        }
-    };
-
     /**
      * Register the ConnectionHandler with the phone, to receive connection events
      */
@@ -223,11 +201,6 @@ public class PhoneUtils {
 
         // pass over cm as user.obj
         cm.registerForPreciseCallStateChanged(mConnectionHandler, PHONE_STATE_CHANGED, cm);
-        // Extended NW service
-        Intent intent = new Intent("com.android.ussd.IExtendedNetworkService");
-        cm.getDefaultPhone().getContext().bindService(intent,
-                ExtendedNetworkServiceConnection, Context.BIND_AUTO_CREATE);
-        if (DBG) log("Extended NW bindService IExtendedNetworkService");
 
     }
 
@@ -244,29 +217,29 @@ public class PhoneUtils {
      * @see #answerAndEndHolding(CallManager, Call)
      * @see #answerAndEndActive(CallManager, Call)
      */
-    /* package */ static boolean answerCall(Call ringing) {
-        log("answerCall(" + ringing + ")...");
+    /* package */ static boolean answerCall(Call ringingCall) {
+        log("answerCall(" + ringingCall + ")...");
         final PhoneGlobals app = PhoneGlobals.getInstance();
+        final CallNotifier notifier = app.notifier;
 
         // If the ringer is currently ringing and/or vibrating, stop it
         // right now (before actually answering the call.)
-        app.getRinger().stopRing();
+        notifier.silenceRinger();
 
-        final Phone phone = ringing.getPhone();
+        final Phone phone = ringingCall.getPhone();
         final boolean phoneIsCdma = (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA);
         boolean answered = false;
         IBluetoothHeadsetPhone btPhone = null;
 
         if (phoneIsCdma) {
             // Stop any signalInfo tone being played when a Call waiting gets answered
-            if (ringing.getState() == Call.State.WAITING) {
-                final CallNotifier notifier = app.notifier;
+            if (ringingCall.getState() == Call.State.WAITING) {
                 notifier.stopSignalInfoTone();
             }
         }
 
-        if (ringing != null && ringing.isRinging()) {
-            if (DBG) log("answerCall: call state = " + ringing.getState());
+        if (ringingCall != null && ringingCall.isRinging()) {
+            if (DBG) log("answerCall: call state = " + ringingCall.getState());
             try {
                 if (phoneIsCdma) {
                     if (app.cdmaPhoneCallState.getCurrentCallState()
@@ -299,10 +272,10 @@ public class PhoneUtils {
                   }
                 }
 
-                final boolean isRealIncomingCall = isRealIncomingCall(ringing.getState());
+                final boolean isRealIncomingCall = isRealIncomingCall(ringingCall.getState());
 
                 //if (DBG) log("sPhone.acceptCall");
-                app.mCM.acceptCall(ringing);
+                app.mCM.acceptCall(ringingCall);
                 answered = true;
 
                 // Always reset to "unmuted" for a freshly-answered call
@@ -392,32 +365,7 @@ public class PhoneUtils {
         int phoneType = ringing.getPhone().getPhoneType();
         Call.State state = ringing.getState();
 
-        if (state == Call.State.INCOMING) {
-            // Regular incoming call (with no other active calls)
-            log("hangupRingingCall(): regular incoming call: hangup()");
-            return hangup(ringing);
-        } else if (state == Call.State.WAITING) {
-            // Call-waiting: there's an incoming call, but another call is
-            // already active.
-            // TODO: It would be better for the telephony layer to provide
-            // a "hangupWaitingCall()" API that works on all devices,
-            // rather than us having to check the phone type here and do
-            // the notifier.sendCdmaCallWaitingReject() hack for CDMA phones.
-            if (phoneType == PhoneConstants.PHONE_TYPE_CDMA) {
-                // CDMA: Ringing call and Call waiting hangup is handled differently.
-                // For Call waiting we DO NOT call the conventional hangup(call) function
-                // as in CDMA we just want to hangup the Call waiting connection.
-                log("hangupRingingCall(): CDMA-specific call-waiting hangup");
-                final CallNotifier notifier = PhoneGlobals.getInstance().notifier;
-                notifier.sendCdmaCallWaitingReject();
-                return true;
-            } else {
-                // Otherwise, the regular hangup() API works for
-                // call-waiting calls too.
-                log("hangupRingingCall(): call-waiting call: hangup()");
-                return hangup(ringing);
-            }
-        } else {
+        if (state != Call.State.INCOMING && state != Call.State.WAITING) {
             // Unexpected state: the ringing call isn't INCOMING or
             // WAITING, so there's no reason to have called
             // hangupRingingCall() in the first place.
@@ -426,6 +374,41 @@ public class PhoneUtils {
             Log.w(LOG_TAG, "hangupRingingCall: no INCOMING or WAITING call");
             return false;
         }
+
+        if (phoneType == PhoneConstants.PHONE_TYPE_GSM || phoneType == PhoneConstants.PHONE_TYPE_SIP) {
+            // Incoming or waiting call
+            log("hangupRingingCall(): incoming/waiting call or communication : rejectCall()");
+            try {
+                CallManager cm = PhoneGlobals.getInstance().mCM;
+
+                cm.rejectCall(ringing);
+                return true;
+            } catch (CallStateException ex) {
+                Log.e(LOG_TAG, "Call Reject: caught " + ex);
+            }
+        } else if (phoneType == PhoneConstants.PHONE_TYPE_CDMA) {
+            if (state == Call.State.INCOMING) {
+                log("hangupRingingCall(): regular incoming call: hangup()");
+                return hangup(ringing);
+            } else if (state == Call.State.WAITING) {
+                // Call-waiting: there's an incoming call, but another call is
+                // already active.
+                // TODO: It would be better for the telephony layer to provide
+                // a "hangupWaitingCall()" API that works on all devices,
+                // rather than us having to check the phone type here and do
+                // the notifier.sendCdmaCallWaitingReject() hack for CDMA phones.
+
+                // CDMA: Ringing call and Call waiting hangup is handled differently.
+                // For Call waiting we DO NOT call the conventional hangup(call) function
+                // as in CDMA we just want to hangup the Call waiting connection.
+                log("hangupRingingCall(): CDMA-specific call-waiting hangup");
+                final CallNotifier notifier = PhoneGlobals.getInstance().notifier;
+                notifier.sendCdmaCallWaitingReject();
+                return true;
+            }
+        }
+
+        return false;
     }
 
     static boolean hangupActiveCall(Call foreground) {
@@ -507,6 +490,15 @@ public class PhoneUtils {
         }
     }
 
+    static void hangupAll(Phone phone) {
+        if (phone == null)
+            return ;
+        String[] request = new String[1];
+        request[0] = Integer.toString(
+                OemTelephonyConstants.RIL_OEM_HOOK_STRING_RELEASE_ALL_CALLS);
+        phone.invokeOemRilRequestStrings(request, null);
+    }
+
     static boolean answerAndEndHolding(CallManager cm, Call ringing) {
         if (DBG) log("end holding & answer waiting: 1");
         if (!hangupHoldingCall(cm.getFirstActiveBgCall())) {
@@ -547,13 +539,6 @@ public class PhoneUtils {
         if (!hangupActiveCall(cm.getActiveFgCall())) {
             Log.w(LOG_TAG, "end active call failed!");
             return false;
-        }
-
-        // since hangupActiveCall() also accepts the ringing call
-        // check if the ringing call was already answered or not
-        // only answer it when the call still is ringing
-        if (ringing.isRinging()) {
-            return answerCall(ringing);
         }
 
         return true;
@@ -672,15 +657,6 @@ public class PhoneUtils {
             if (phoneType == PhoneConstants.PHONE_TYPE_GSM && gatewayUri == null) {
                 if (DBG) log("dialed MMI code: " + number);
                 status = CALL_STATUS_DIALED_MMI;
-                // Set dialed MMI command to service
-                if (mNwService != null) {
-                    try {
-                        mNwService.setMmiString(number);
-                        if (DBG) log("Extended NW bindService setUssdString (" + number + ")");
-                    } catch (RemoteException e) {
-                        mNwService = null;
-                    }
-                }
             } else {
                 status = CALL_STATUS_FAILED;
             }
@@ -942,36 +918,6 @@ public class PhoneUtils {
         //
         // Anything that is NOT a USSD request is a normal MMI request,
         // which will bring up a toast (desribed above).
-        // Optional code for Extended USSD running prompt
-        if (mNwService != null) {
-            if (DBG) log("running USSD code, displaying indeterminate progress.");
-            // create the indeterminate progress dialog and display it.
-            ProgressDialog pd = new ProgressDialog(context);
-            CharSequence textmsg = "";
-            try {
-                textmsg = mNwService.getMmiRunningText();
-
-            } catch (RemoteException e) {
-                mNwService = null;
-                textmsg = context.getText(R.string.ussdRunning);
-            }
-            if (DBG) log("Extended NW displayMMIInitiate (" + textmsg + ")");
-            pd.setMessage(textmsg);
-            pd.setCancelable(false);
-            pd.setIndeterminate(true);
-            pd.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND
-                    | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            pd.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG);
-            pd.show();
-            // trigger a 15 seconds timeout to clear this progress dialog
-            mMmiTimeoutCbMsg = buttonCallbackMessage;
-            try {
-                mMmiTimeoutCbMsg.getTarget().sendMessageDelayed(buttonCallbackMessage, 15000);
-            } catch(NullPointerException e) {
-                mMmiTimeoutCbMsg = null;
-            }
-            return pd;
-        }
 
         boolean isCancelable = (mmiCode != null) && mmiCode.isCancelable();
 
@@ -1015,16 +961,6 @@ public class PhoneUtils {
         MmiCode.State state = mmiCode.getState();
 
         if (DBG) log("displayMMIComplete: state=" + state);
-        // Clear timeout trigger message
-        if(mMmiTimeoutCbMsg != null) {
-            try{
-                mMmiTimeoutCbMsg.getTarget().removeMessages(mMmiTimeoutCbMsg.what);
-                if (DBG) log("Extended NW displayMMIComplete removeMsg");
-            } catch (NullPointerException e) {
-            }
-            mMmiTimeoutCbMsg = null;
-        }
-
 
         switch (state) {
             case PENDING:
@@ -1093,14 +1029,6 @@ public class PhoneUtils {
             if (state != MmiCode.State.PENDING) {
                 if (DBG) log("MMI code has finished running.");
 
-                // Replace response message with Extended Mmi wording
-                if (mNwService != null) {
-                    try {
-                        text = mNwService.getUserMessage(text);
-                    } catch (RemoteException e) {
-                        mNwService = null;
-                    }
-                }
                 if (DBG) log("Extended NW displayMMIInitiate (" + text + ")");
                 if (text == null || text.length() == 0)
                     return;
@@ -1235,18 +1163,6 @@ public class PhoneUtils {
                 mmiCode.cancel();
                 canceled = true;
             }
-        }
-
-        //clear timeout message and pre-set MMI command
-        if (mNwService != null) {
-            try {
-                mNwService.clearMmiString();
-            } catch (RemoteException e) {
-                mNwService = null;
-            }
-        }
-        if (mMmiTimeoutCbMsg != null) {
-            mMmiTimeoutCbMsg = null;
         }
         return canceled;
     }
@@ -2352,7 +2268,9 @@ public class PhoneUtils {
         // "ABSENT NUMBER" is a possible value we could get from the network as the
         // phone number, so if this happens, change it to "Unknown" in the CallerInfo
         // and fix the presentation to be the same.
-        if (number.equals(context.getString(R.string.absent_num))
+        final String[] absentNumberValues =
+                context.getResources().getStringArray(R.array.absent_num);
+        if (Arrays.asList(absentNumberValues).contains(number)
                 && presentation == PhoneConstants.PRESENTATION_ALLOWED) {
             number = context.getString(R.string.unknown);
             ci.numberPresentation = PhoneConstants.PRESENTATION_UNKNOWN;

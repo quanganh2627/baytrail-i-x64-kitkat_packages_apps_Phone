@@ -24,6 +24,7 @@
 
     <original-package android:name="com.android.phone" />
 
+    <protected-broadcast android:name="android.intent.action.EMERGENCY_CALL_STATUS" />
     <protected-broadcast android:name="android.intent.action.SERVICE_STATE" />
     <protected-broadcast android:name="android.intent.action.RADIO_TECHNOLOGY" />
     <protected-broadcast android:name="android.intent.action.EMERGENCY_CALLBACK_MODE_CHANGED" />
@@ -107,7 +108,7 @@
         <activity android:name="EmergencyDialer"
             android:label="@string/emergencyDialerIconLabel"
             android:theme="@style/EmergencyDialerTheme"
-            android:screenOrientation="nosensor">
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.android.phone.EmergencyDialer.DIAL" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -265,6 +266,7 @@
              non-voice-capable tablets and regular phone devices. -->
         <activity android:name="MobileNetworkSettings"
             android:label="@string/settings_label"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:theme="@style/Theme.Settings">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
