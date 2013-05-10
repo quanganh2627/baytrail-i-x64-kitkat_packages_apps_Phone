@@ -72,6 +72,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     private static final int EVENT_OPEN_CHANNEL_DONE = 10;
     private static final int CMD_CLOSE_CHANNEL = 11;
     private static final int EVENT_CLOSE_CHANNEL_DONE = 12;
+    private static final int CMD_SIM_IO = 13;
+    private static final int EVENT_SIM_IO_DONE = 14;
 
     /** The singleton instance. */
     private static PhoneInterfaceManager sInstance;
@@ -292,6 +294,40 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                     }
                     synchronized (request) {
                         request.notifyAll();
+                    }
+                    break;
+
+               case CMD_SIM_IO:
+                    request = (MainThreadRequest) msg.obj;
+                    IccAPDUArgument parameters =
+                            (IccAPDUArgument) request.argument;
+                    onCompleted = obtainMessage(EVENT_SIM_IO_DONE, request);
+                    Log.d(LOG_TAG, "CMD_SIM_IO");
+                    mPhone.getIccCard().exchangeSimIO(parameters.cla, /* fileID */
+                             parameters.command, parameters.p1, parameters.p2,
+                             parameters.p3, parameters.data, onCompleted);
+                    break;
+
+               case EVENT_SIM_IO_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    request = (MainThreadRequest) ar.userObj;
+                    Log.d(LOG_TAG, "EVENT_SIM_IO_DONE");
+                    if (ar.exception == null && ar.result != null) {
+                        request.result = ar.result;
+                        lastError = 0;
+                    } else {
+                        request.result = new IccIoResult(0x6f, 0, (byte[])null);
+                        lastError = 1;
+                        if ((ar.exception != null)
+                                && (ar.exception instanceof CommandException)) {
+                            if (((CommandException)ar.exception).getCommandError()
+                                    == CommandException.Error.INVALID_PARAMETER) {
+                                lastError = 5;
+                            }
+                        }
+                    }
+                    synchronized (request) {
+                         request.notifyAll();
                     }
                     break;
 
@@ -1030,5 +1066,33 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
     public int getLastError() {
         return lastError;
+    }
+
+    public byte[] transmitIccSimIO(int fileID, int command,
+                                   int p1, int p2, int p3, String filePath) {
+        if (Binder.getCallingUid() != Process.SMARTCARD_UID)
+            throw new SecurityException("Only Smartcard API may access UICC");
+
+        Log.d(LOG_TAG, "Exchange SIM_IO " + fileID + ":" + command + " " +
+                p1 + " " + p2 + " " + p3 + ":" + filePath);
+        IccIoResult response = (IccIoResult)sendRequest(CMD_SIM_IO,
+                new IccAPDUArgument(fileID, command, -1, p1, p2, p3, filePath));
+        Log.d(LOG_TAG, "Exchange SIM_IO [R]" + response);
+
+        byte[] result = null;
+        int length = 2;
+        if (response.payload != null) {
+            length = 2 + response.payload.length;
+            result = new byte[length];
+            System.arraycopy(response.payload, 0, result, 0,
+                    response.payload.length);
+        } else
+            result = new byte[length];
+
+        Log.d(LOG_TAG, "Exchange SIM_IO [L] " + length);
+
+        result[length-1] = (byte)response.sw2;
+        result[length-2] = (byte)response.sw1;
+        return result;
     }
 }
