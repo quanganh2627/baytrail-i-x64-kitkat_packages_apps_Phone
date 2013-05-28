@@ -30,6 +30,9 @@ public class GsmUmtsAdditionalCallOptions extends
     private final ArrayList<Preference> mPreferences = new ArrayList<Preference>();
     private int mInitIndex= 0;
 
+    private boolean mFirstResume;
+    private Bundle mIcicle;
+
     private IntentFilter mIntentFilter;
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -70,23 +73,12 @@ public class GsmUmtsAdditionalCallOptions extends
 
         mIntentFilter = new IntentFilter(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
 
-        if (icicle == null) {
-            if (DBG) Log.d(LOG_TAG, "start to init ");
-            mCLIRButton.init(this, false);
-        } else {
-            if (DBG) Log.d(LOG_TAG, "restore stored states");
-            mInitIndex = mPreferences.size();
-            mCLIRButton.init(this, true);
-            mCWButton.init(this, true);
-            int[] clirArray = icicle.getIntArray(mCLIRButton.getKey());
-            if (clirArray != null) {
-                if (DBG) Log.d(LOG_TAG, "onCreate:  clirArray[0]="
-                        + clirArray[0] + ", clirArray[1]=" + clirArray[1]);
-                mCLIRButton.handleGetCLIRResult(clirArray);
-            } else {
-                mCLIRButton.init(this, false);
-            }
-        }
+        // we wait to do the initialization until onResume so that the
+        // TimeConsumingPreferenceActivity dialog can display as it
+        // relies on onResume / onPause to maintain its foreground state.
+
+        mFirstResume = true;
+        mIcicle = icicle;
 
         ActionBar actionBar = getActionBar();
         if (actionBar != null) {
@@ -130,6 +122,28 @@ public class GsmUmtsAdditionalCallOptions extends
     public void onResume() {
         super.onResume();
         registerReceiver(mReceiver, mIntentFilter);
+
+        if (mFirstResume) {
+            if (mIcicle == null) {
+                if (DBG) Log.d(LOG_TAG, "start to init ");
+                mCLIRButton.init(this, false);
+            } else {
+                if (DBG) Log.d(LOG_TAG, "restore stored states");
+                mInitIndex = mPreferences.size();
+                mCLIRButton.init(this, true);
+                mCWButton.init(this, true);
+                int[] clirArray = mIcicle.getIntArray(mCLIRButton.getKey());
+                if (clirArray != null) {
+                    if (DBG) Log.d(LOG_TAG, "onCreate:  clirArray[0]="
+                            + clirArray[0] + ", clirArray[1]=" + clirArray[1]);
+                    mCLIRButton.handleGetCLIRResult(clirArray);
+                } else {
+                    mCLIRButton.init(this, false);
+                }
+                mFirstResume = false;
+                mIcicle = null;
+            }
+        }
     }
 
     @Override
