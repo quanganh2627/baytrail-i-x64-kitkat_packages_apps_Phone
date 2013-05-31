@@ -446,7 +446,7 @@ public class CallNotifier extends Handler
 
         // - don't ring for call waiting connections
         // - do this before showing the incoming call panel
-        if (PhoneUtils.isRealIncomingCall(state)) {
+        if (PhoneUtils.isRealIncomingCall(state) || (state == Call.State.WAITING)) {
             startIncomingCallQuery(c);
         } else {
             if (VDBG) log("- starting call waiting tone...");
