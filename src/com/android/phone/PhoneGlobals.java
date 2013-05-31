@@ -490,6 +490,32 @@ public class PhoneGlobals extends ContextWrapper
                 Log.e(LOG_TAG, "OEM Hook class creation Failed!");
             }
 
+            try {
+                if (getResources().getBoolean(R.bool.config_usage_sar_manager_supported)) {
+                    if (DBG) {
+                        Log.d(LOG_TAG, "**********************************"
+                                + " SarManagerCreator loading *****************"
+                                + "*********************************************");
+                    }
+                    DexClassLoader classLoader = new DexClassLoader(
+                            getResources().getString(R.string.config_sar_manager_jar_file),
+                            new ContextWrapper(phone.getContext()).getCacheDir().getAbsolutePath(),
+                            null, ClassLoader.getSystemClassLoader());
+                    classLoader.loadClass( getResources().getString(
+                            R.string.config_sar_manager_class_name)).getConstructor(
+                              DexClassLoader.class).newInstance(classLoader);
+                } else {
+                    if (DBG) Log.d(LOG_TAG, "#######################################"
+                            + " NO SAR Manager ############################################");
+                }
+            } catch (Resources.NotFoundException ex) {
+                Log.e(LOG_TAG, "Resource reading Failed!");
+            } catch (ClassNotFoundException ex) {
+                Log.e(LOG_TAG, "SAR Manager class loading failed");
+            } catch (Exception ex) {
+                Log.e(LOG_TAG, "SAR Manager class creation Failed!");
+            }
+
             mHandler.sendEmptyMessage(EVENT_START_SIP_SERVICE);
 
             int phoneType = phone.getPhoneType();
