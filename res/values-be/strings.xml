@@ -170,6 +170,7 @@
     <string name="preferred_network_mode_lte_cdma_summary" msgid="3722647806454528426">"Пераважны рэжым сеткі: LTE/CDMA"</string>
     <string name="preferred_network_mode_lte_only_summary" msgid="3722647806454528427">"Пераважны рэжым сеткі: толькі LTE"</string>
     <string name="preferred_network_mode_lte_wcdma_gsm_summary" msgid="3722647806454528428">"Пераважны рэжым сеткі: LTE/WCDMA/GSM"</string>
+    <string name="preferred_network_mode_lte_wcdma_summary">"Пераважны рэжым сеткі: LTE/WCDMA"</string>
   <string-array name="preferred_network_mode_choices">
     <item msgid="5543794538185064048">"LTE/CDMA"</item>
     <item msgid="3273348576277144124">"Толькі EVDO"</item>

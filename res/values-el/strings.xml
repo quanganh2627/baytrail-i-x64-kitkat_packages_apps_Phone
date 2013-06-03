@@ -170,6 +170,7 @@
     <string name="preferred_network_mode_lte_cdma_summary" msgid="3722647806454528426">"Προτιμώμενη λειτουργία δικτύου: LTE / CDMA"</string>
     <string name="preferred_network_mode_lte_only_summary" msgid="3722647806454528427">"Προτιμώμενη λειτουργία δικτύου: μόνο LTE"</string>
     <string name="preferred_network_mode_lte_wcdma_gsm_summary" msgid="3722647806454528428">"Προτιμώμενη λειτουργία δικτύου: LTE/WCDMA/GSM"</string>
+    <string name="preferred_network_mode_lte_wcdma_summary">"Προτιμώμενη λειτουργία δικτύου: LTE/WCDMA"</string>
   <string-array name="preferred_network_mode_choices">
     <item msgid="5543794538185064048">"LTE / CDMA"</item>
     <item msgid="3273348576277144124">"Μόνο EvDo"</item>

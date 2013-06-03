@@ -170,6 +170,7 @@
     <string name="preferred_network_mode_lte_cdma_summary" msgid="3722647806454528426">"מצב רשת מועדפת: LTE / CDMA"</string>
     <string name="preferred_network_mode_lte_only_summary" msgid="3722647806454528427">"מצב רשת מועדפת: LTE בלבד"</string>
     <string name="preferred_network_mode_lte_wcdma_gsm_summary" msgid="3722647806454528428">"מצב רשת מועדפת: LTE/WCDMA/GSM"</string>
+    <string name="preferred_network_mode_lte_wcdma_summary">"מצב רשת מועדפת: LTE/WCDMA"</string>
   <string-array name="preferred_network_mode_choices">
     <item msgid="5543794538185064048">"LTE/CDMA"</item>
     <item msgid="3273348576277144124">"EvDo בלבד"</item>
