@@ -168,6 +168,9 @@
     <string name="preferred_network_mode_cdma_only_summary" msgid="1309770926198634150">"โหมดเครือข่ายที่ต้องการ: CDMA เท่านั้น"</string>
     <string name="preferred_network_mode_evdo_only_summary" msgid="8472220691721269155">"โหมดเครือข่ายที่ต้องการ: EvDo เท่านั้น"</string>
     <string name="preferred_network_mode_lte_cdma_summary" msgid="3722647806454528426">"โหมดเครือข่ายที่ต้องการ: LTE/CDMA"</string>
+    <string name="preferred_network_mode_lte_only_summary" msgid="3722647806454528427">"โหมดเครือข่ายที่ต้องการ: LTE เท่านั้น"</string>
+    <string name="preferred_network_mode_lte_wcdma_gsm_summary" msgid="3722647806454528428">"โหมดเครือข่ายที่ต้องการ: LTE/WCDMA/GSM"</string>
+    <string name="preferred_network_mode_lte_wcdma_summary">"โหมดเครือข่ายที่ต้องการ: LTE/WCDMA"</string>
   <string-array name="preferred_network_mode_choices">
     <item msgid="5543794538185064048">"LTE/CDMA"</item>
     <item msgid="3273348576277144124">"EvDo เท่านั้น"</item>
