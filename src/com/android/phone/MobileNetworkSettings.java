@@ -391,14 +391,6 @@ public class MobileNetworkSettings extends PreferenceActivity
                         modemNetworkMode = Phone.PREFERRED_NT_MODE;
                 }
 
-                // If button has no valid selection && setting is LTE ONLY
-                // mode, let the setting stay in LTE ONLY mode. UI is not
-                // supported but LTE ONLY mode could be used in testing.
-                if ((modemNetworkMode == Phone.PREFERRED_NT_MODE) &&
-                    (settingsNetworkMode == Phone.NT_MODE_LTE_ONLY)) {
-                    return true;
-                }
-
                 UpdatePreferredNetworkModeSummary(buttonNetworkMode);
 
                 android.provider.Settings.Global.putInt(mPhone.getContext().getContentResolver(),
