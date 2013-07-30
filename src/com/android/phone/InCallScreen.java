@@ -2423,6 +2423,7 @@ public class InCallScreen extends Activity
                     showWaitPromptDialog(fgLatestConnection, postDialStr);
                 }
             } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                    || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                     || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                 for (Connection cn : fgConnections) {
                     if ((cn != null) && (cn.getPostDialState() == Connection.PostDialState.WAIT)) {
@@ -3503,7 +3504,8 @@ public class InCallScreen extends Activity
                 } else {
                     PhoneUtils.answerCall(ringing);
                 }
-            } else if (phoneType == PhoneConstants.PHONE_TYPE_GSM) {
+            } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM) ||
+                      (phoneType == PhoneConstants.PHONE_TYPE_IMS))  {
                 if (DBG) log("internalAnswerCall: answering (GSM)...");
                 // GSM: this is usually just a wrapper around
                 // PhoneUtils.answerCall(), *but* we also need to do
