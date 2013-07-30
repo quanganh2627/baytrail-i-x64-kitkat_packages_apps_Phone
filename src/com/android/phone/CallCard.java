@@ -532,6 +532,7 @@ public class CallCard extends LinearLayout
             if (phoneType == PhoneConstants.PHONE_TYPE_CDMA) {
                 conn = call.getLatestConnection();
             } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                  || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                   || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                 conn = call.getEarliestConnection();
             } else {
@@ -670,6 +671,7 @@ public class CallCard extends LinearLayout
             if (phoneType == PhoneConstants.PHONE_TYPE_CDMA) {
                 conn = call.getLatestConnection();
             } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                  || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                   || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                 conn = call.getEarliestConnection();
             } else {
@@ -1435,6 +1437,7 @@ public class CallCard extends LinearLayout
             showImage(mPhoto, R.drawable.picture_dialing);
             mName.setText(R.string.card_title_in_call);
         } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                 || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
             // Normal GSM (or possibly SIP?) conference call.
             // Display the "conference call" image as the contact photo.
@@ -1534,6 +1537,7 @@ public class CallCard extends LinearLayout
                     if (phoneType == PhoneConstants.PHONE_TYPE_CDMA) {
                         conn = call.getLatestConnection();
                     } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                            || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                             || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                         conn = call.getEarliestConnection();
                     } else {

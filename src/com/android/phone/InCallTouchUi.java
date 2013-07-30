@@ -485,6 +485,7 @@ public class InCallTouchUi extends FrameLayout
                 // we always set the mMergeButton to GONE
                 mMergeButton.setVisibility(View.GONE);
             } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                    || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                     || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                 mMergeButton.setVisibility(View.VISIBLE);
                 mMergeButton.setEnabled(true);
@@ -506,6 +507,7 @@ public class InCallTouchUi extends FrameLayout
         }
         if (inCallControlState.canAddCall && inCallControlState.canMerge) {
             if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                    || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                     || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                 // Uh oh, the InCallControlState thinks that "Add" *and* "Merge"
                 // should both be available right now.  This *should* never
