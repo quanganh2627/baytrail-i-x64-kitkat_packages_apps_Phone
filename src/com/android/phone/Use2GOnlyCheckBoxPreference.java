@@ -111,8 +111,22 @@ public class Use2GOnlyCheckBoxPreference extends CheckBoxPreference {
                 }
                 Log.i(LOG_TAG, "get preferred network type="+type);
                 setChecked(type == Phone.NT_MODE_GSM_ONLY);
-                android.provider.Settings.Global.putInt(mPhone.getContext().getContentResolver(),
-                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE, type);
+                int storedNetworkMode = android.provider.Settings.Global.getInt(
+                        mPhone.getContext().getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        Phone.PREFERRED_NT_MODE);
+
+                // check changes in currentNetworkMode and updates storedNetworkMode
+                if (type != storedNetworkMode) {
+                    storedNetworkMode = type;
+                    Log.i(LOG_TAG, "handleGetPreferredNetworkTypeResponse: " +
+                                "storedNetworkMode = " + storedNetworkMode);
+                    // changes the Settings.System accordingly to currentNetworkMode
+                    android.provider.Settings.Global.putInt(
+                            mPhone.getContext().getContentResolver(),
+                            android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                            storedNetworkMode);
+                }
             } else {
                 // Weird state, disable the setting
                 Log.i(LOG_TAG, "get preferred network type, exception="+ar.exception);
@@ -131,6 +145,10 @@ public class Use2GOnlyCheckBoxPreference extends CheckBoxPreference {
                 mPhone.getPreferredNetworkType(obtainMessage(MESSAGE_GET_PREFERRED_NETWORK_TYPE));
             } else {
                 Log.i(LOG_TAG, "set preferred network type done");
+                setEnabled(true);
+                android.provider.Settings.Global.putInt(mPhone.getContext().getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        isChecked() ? Phone.NT_MODE_GSM_ONLY : Phone.NT_MODE_WCDMA_PREF);
             }
         }
     }
