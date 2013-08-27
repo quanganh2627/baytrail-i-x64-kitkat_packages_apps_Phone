@@ -98,4 +98,17 @@
         <item>@null</item>
     </array>
 
+    <!-- Authentication Types used in IMS Settings -->
+    <string-array translatable="false" name="ims_auth_mode_entries">
+        <item>EARLY-GIBA</item>
+        <item>DIGEST</item>
+        <item>IMS_AKA</item>
+    </string-array>
+
+    <!-- Local Breakout in IMS Settings -->
+    <string-array translatable="false" name="local_breakout_entries">
+        <item>Disabled</item>
+        <item>Enabled</item>
+    </string-array>
+
 </resources>

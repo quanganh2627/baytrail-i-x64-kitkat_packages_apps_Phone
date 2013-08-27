@@ -57,7 +57,6 @@ import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.TelephonyCapabilities;
 
-
 /**
  * NotificationManager-related utility code for the Phone app.
  *
@@ -1084,8 +1083,18 @@ public class NotificationMgr implements CallerInfoAsyncQuery.OnQueryCompleteList
                 //
                 // TODO: there should be a cleaner way of avoiding this
                 // problem (see discussion in bug 3184149.)
+                // Add a condition "ringingCall.getState() == Call.State.INCOMING"
+                // because we find a case that need cancel the notification when there
+                // is a new incoming call.
+                // Case:
+                // 1.BT HSP (8k) is paired and connected to the handset.
+                // 2: Launch the voice recording application (e.g. PSI Recorder).
+                // 3: Press the Bluetooth Button to route audio to BT HSP.
+                // 4: Receive a MT Voice call.
                 Call ringingCall = mCM.getFirstActiveRingingCall();
-                if ((ringingCall.getState() == Call.State.WAITING) && !mApp.isShowingCallScreen()) {
+                if ((ringingCall.getState() == Call.State.WAITING
+                        || ringingCall.getState() == Call.State.INCOMING)
+                        && !mApp.isShowingCallScreen()) {
                     Log.i(LOG_TAG, "updateInCallNotification: call-waiting! force relaunch...");
                     // Cancel the IN_CALL_NOTIFICATION immediately before
                     // (re)posting it; this seems to force the
@@ -1355,22 +1364,20 @@ public class NotificationMgr implements CallerInfoAsyncQuery.OnQueryCompleteList
         if (DBG) log("showDataDisconnectedRoaming()...");
 
         // "Mobile network settings" screen / dialog
-        Intent intent = new Intent(mContext,
-                com.android.phone.MobileNetworkSettings.class);
+        Intent intent = new Intent(mContext, com.android.phone.MobileNetworkSettings.class);
 
-        Notification notification = new Notification(
-                android.R.drawable.stat_sys_warning, // icon
-                null, // tickerText
-                System.currentTimeMillis());
-        notification.setLatestEventInfo(
-                mContext, // Context
-                mContext.getString(R.string.roaming), // expandedTitle
-                mContext.getString(R.string.roaming_reenable_message), // expandedText
-                PendingIntent.getActivity(mContext, 0, intent, 0)); // contentIntent
+        final CharSequence contentText = mContext.getText(R.string.roaming_reenable_message);
 
-        mNotificationManager.notify(
-                DATA_DISCONNECTED_ROAMING_NOTIFICATION,
-                notification);
+        final Notification.Builder builder = new Notification.Builder(mContext);
+        builder.setSmallIcon(android.R.drawable.stat_sys_warning);
+        builder.setContentTitle(mContext.getText(R.string.roaming));
+        builder.setContentText(contentText);
+        builder.setContentIntent(PendingIntent.getActivity(mContext, 0, intent, 0));
+
+        final Notification notif = new Notification.BigTextStyle(builder).bigText(contentText)
+                .build();
+
+        mNotificationManager.notify(DATA_DISCONNECTED_ROAMING_NOTIFICATION, notif);
     }
 
     /**

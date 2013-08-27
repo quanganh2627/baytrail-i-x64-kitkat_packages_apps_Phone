@@ -17,6 +17,7 @@
 package com.android.phone;
 
 import android.app.ActivityManager;
+import android.app.AppOpsManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -37,12 +38,15 @@ import android.telephony.ServiceState;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.DefaultPhoneNotifier;
 import com.android.internal.telephony.IccCard;
+import com.android.internal.telephony.IccUtils;
 import com.android.internal.telephony.ITelephony;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.CallManager;
 import com.android.internal.telephony.PhoneConstants;
+import com.android.internal.telephony.uicc.IccIoResult;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -62,14 +66,42 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     private static final int CMD_ANSWER_RINGING_CALL = 4;
     private static final int CMD_END_CALL = 5;  // not used yet
     private static final int CMD_SILENCE_RINGER = 6;
+    private static final int CMD_EXCHANGE_APDU = 7;
+    private static final int EVENT_EXCHANGE_APDU_DONE = 8;
+    private static final int CMD_OPEN_CHANNEL = 9;
+    private static final int EVENT_OPEN_CHANNEL_DONE = 10;
+    private static final int CMD_CLOSE_CHANNEL = 11;
+    private static final int EVENT_CLOSE_CHANNEL_DONE = 12;
+    private static final int CMD_SIM_IO = 13;
+    private static final int EVENT_SIM_IO_DONE = 14;
 
     /** The singleton instance. */
     private static PhoneInterfaceManager sInstance;
 
+    private int lastError;
+
     PhoneGlobals mApp;
     Phone mPhone;
     CallManager mCM;
+    AppOpsManager mAppOps;
     MainThreadHandler mMainThreadHandler;
+
+    private static final class IccAPDUArgument {
+
+        public int channel, cla, command, p1, p2, p3;
+        public String data;
+
+        public IccAPDUArgument(int cla, int command, int channel,
+                int p1, int p2, int p3, String data) {
+            this.channel = channel;
+            this.cla = cla;
+            this.command = command;
+            this.p1 = p1;
+            this.p2 = p2;
+            this.p3 = p3;
+            this.data = data;
+        }
+    }
 
     /**
      * A request object for use with {@link MainThreadHandler}. Requesters should wait() on the
@@ -168,6 +200,138 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                     }
                     break;
 
+                case CMD_EXCHANGE_APDU:
+                    request = (MainThreadRequest) msg.obj;
+                    IccAPDUArgument argument = (IccAPDUArgument) request.argument;
+                    onCompleted = obtainMessage(EVENT_EXCHANGE_APDU_DONE, request);
+                    mPhone.getIccCard().exchangeAPDU(argument.cla, argument.command,
+                            argument.channel, argument.p1, argument.p2, argument.p3,
+                            argument.data, onCompleted);
+                    break;
+
+                case EVENT_EXCHANGE_APDU_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    request = (MainThreadRequest) ar.userObj;
+                    if (ar.exception == null && ar.result != null) {
+                        request.result = ar.result;
+                        lastError = 0;
+                    } else {
+                        request.result = new IccIoResult(0x6f, 0, (byte[])null);
+                        lastError = 1;
+                        if ((ar.exception != null)
+                                && (ar.exception instanceof CommandException)) {
+                            if (((CommandException)ar.exception)
+                                    .getCommandError() ==
+                                            CommandException.Error.INVALID_PARAMETER) {
+                                lastError = 5;
+                            }
+                        }
+                    }
+                    synchronized (request) {
+                        request.notifyAll();
+                    }
+                    break;
+
+                case CMD_OPEN_CHANNEL:
+                    request = (MainThreadRequest) msg.obj;
+                    onCompleted = obtainMessage(EVENT_OPEN_CHANNEL_DONE, request);
+                    mPhone.getIccCard().openLogicalChannel((String)request.argument, onCompleted);
+                    break;
+
+                case EVENT_OPEN_CHANNEL_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    request = (MainThreadRequest) ar.userObj;
+                    if (ar.exception == null && ar.result != null) {
+                        request.result = new Integer(((int[])ar.result)[0]);
+                        lastError = 0;
+                    } else {
+                        request.result = new Integer(0);
+                        lastError = 1;
+                        if ((ar.exception != null)
+                                && (ar.exception instanceof CommandException)) {
+                            if (((CommandException)ar.exception)
+                                    .getCommandError() ==
+                                    CommandException.Error.MISSING_RESOURCE) {
+                                lastError = 2;
+                            } else {
+                                if (((CommandException)ar.exception)
+                                    .getCommandError() ==
+                                    CommandException.Error.NO_SUCH_ELEMENT) {
+                                    lastError = 3;
+                                }
+                            }
+                        }
+                    }
+                    synchronized (request) {
+                        request.notifyAll();
+                    }
+                    break;
+
+                case CMD_CLOSE_CHANNEL:
+                    request = (MainThreadRequest) msg.obj;
+                    onCompleted = obtainMessage(EVENT_CLOSE_CHANNEL_DONE, request);
+                    mPhone.getIccCard().closeLogicalChannel(
+                            ((Integer)request.argument).intValue(),
+                            onCompleted);
+                    break;
+
+                case EVENT_CLOSE_CHANNEL_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    request = (MainThreadRequest) ar.userObj;
+                    if (ar.exception == null) {
+                        request.result = new Integer(0);
+                        lastError = 0;
+                    } else {
+                        request.result = new Integer(-1);
+                        lastError = 1;
+                        if ((ar.exception != null)
+                                && (ar.exception instanceof CommandException)) {
+                            if (((CommandException)ar.exception)
+                                    .getCommandError() ==
+                                    CommandException.Error.INVALID_PARAMETER) {
+                                lastError = 5;
+                            }
+                        }
+                    }
+                    synchronized (request) {
+                        request.notifyAll();
+                    }
+                    break;
+
+               case CMD_SIM_IO:
+                    request = (MainThreadRequest) msg.obj;
+                    IccAPDUArgument parameters =
+                            (IccAPDUArgument) request.argument;
+                    onCompleted = obtainMessage(EVENT_SIM_IO_DONE, request);
+                    Log.d(LOG_TAG, "CMD_SIM_IO");
+                    mPhone.getIccCard().exchangeSimIO(parameters.cla, /* fileID */
+                             parameters.command, parameters.p1, parameters.p2,
+                             parameters.p3, parameters.data, onCompleted);
+                    break;
+
+               case EVENT_SIM_IO_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    request = (MainThreadRequest) ar.userObj;
+                    Log.d(LOG_TAG, "EVENT_SIM_IO_DONE");
+                    if (ar.exception == null && ar.result != null) {
+                        request.result = ar.result;
+                        lastError = 0;
+                    } else {
+                        request.result = new IccIoResult(0x6f, 0, (byte[])null);
+                        lastError = 1;
+                        if ((ar.exception != null)
+                                && (ar.exception instanceof CommandException)) {
+                            if (((CommandException)ar.exception).getCommandError()
+                                    == CommandException.Error.INVALID_PARAMETER) {
+                                lastError = 5;
+                            }
+                        }
+                    }
+                    synchronized (request) {
+                         request.notifyAll();
+                    }
+                    break;
+
                 default:
                     Log.w(LOG_TAG, "MainThreadHandler: unexpected message code: " + msg.what);
                     break;
@@ -178,7 +342,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     /**
      * Posts the specified command to be executed on the main thread,
      * waits for the request to complete, and returns the result.
-     * @see sendRequestAsync
+     * @see #sendRequestAsync
      */
     private Object sendRequest(int command, Object argument) {
         if (Looper.myLooper() == mMainThreadHandler.getLooper()) {
@@ -206,7 +370,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      * Asynchronous ("fire and forget") version of sendRequest():
      * Posts the specified command to be executed on the main thread, and
      * returns immediately.
-     * @see sendRequest
+     * @see #sendRequest
      */
     private void sendRequestAsync(int command) {
         mMainThreadHandler.sendEmptyMessage(command);
@@ -232,6 +396,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         mApp = app;
         mPhone = phone;
         mCM = PhoneGlobals.getInstance().mCM;
+        mAppOps = (AppOpsManager)app.getSystemService(Context.APP_OPS_SERVICE);
         mMainThreadHandler = new MainThreadHandler();
         publish();
     }
@@ -266,13 +431,18 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         }
     }
 
-    public void call(String number) {
+    public void call(String callingPackage, String number) {
         if (DBG) log("call: " + number);
 
         // This is just a wrapper around the ACTION_CALL intent, but we still
         // need to do a permission check since we're calling startActivity()
         // from the context of the phone app.
         enforceCallPermission();
+
+        if (mAppOps.noteOp(AppOpsManager.OP_CALL_PHONE, Binder.getCallingUid(), callingPackage)
+                != AppOpsManager.MODE_ALLOWED) {
+            return;
+        }
 
         String url = createTelUrl(number);
         if (url == null) {
@@ -351,7 +521,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     /**
      * Make the actual telephony calls to implement answerRingingCall().
      * This should only be called from the main thread of the Phone app.
-     * @see answerRingingCall
+     * @see #answerRingingCall
      *
      * TODO: it would be nice to return true if we answered the call, or
      * false if there wasn't actually a ringing incoming call, or some
@@ -398,7 +568,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     /**
      * Internal implemenation of silenceRinger().
      * This should only be called from the main thread of the Phone app.
-     * @see silenceRinger
+     * @see #silenceRinger
      */
     private void silenceRingerInternal() {
         if ((mCM.getState() == PhoneConstants.State.RINGING)
@@ -532,7 +702,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     public boolean isRadioOn() {
-        return mPhone.getServiceState().getState() != ServiceState.STATE_POWER_OFF;
+        return mPhone.getServiceState().getVoiceRegState() != ServiceState.STATE_POWER_OFF;
     }
 
     public void toggleRadioOnOff() {
@@ -541,9 +711,12 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
     public boolean setRadio(boolean turnOn) {
         enforceModifyPermission();
-        if ((mPhone.getServiceState().getState() != ServiceState.STATE_POWER_OFF) != turnOn) {
-            toggleRadioOnOff();
-        }
+        mPhone.setRadioPower(turnOn);
+        return true;
+    }
+    public boolean setRadioPower(boolean turnOn) {
+        enforceModifyPermission();
+        mPhone.setRadioPower(turnOn);
         return true;
     }
 
@@ -639,7 +812,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<NeighboringCellInfo> getNeighboringCellInfo() {
+    public List<NeighboringCellInfo> getNeighboringCellInfo(String callingPackage) {
         try {
             mApp.enforceCallingOrSelfPermission(
                     android.Manifest.permission.ACCESS_FINE_LOCATION, null);
@@ -652,6 +825,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                     android.Manifest.permission.ACCESS_COARSE_LOCATION, null);
         }
 
+        if (mAppOps.noteOp(AppOpsManager.OP_NEIGHBORING_CELLS, Binder.getCallingUid(),
+                callingPackage) != AppOpsManager.MODE_ALLOWED) {
+            return null;
+        }
         if (checkIfCallerIsSelfOrForegoundUser()) {
             if (DBG_LOC) log("getNeighboringCellInfo: is active user");
 
@@ -691,6 +868,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
             if (DBG_LOC) log("getAllCellInfo: suppress non-active user");
             return null;
         }
+    }
+
+    public void setCellInfoListRate(int rateInMillis) {
+        mPhone.setCellInfoListRate(rateInMillis);
     }
 
     //
@@ -817,10 +998,29 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     /**
-     * Returns the network type
+     * Returns the data network type
+     *
+     * @Deprecated to be removed Q3 2013 use {@link #getDataNetworkType}.
      */
+    @Override
     public int getNetworkType() {
-        return mPhone.getServiceState().getNetworkType();
+        return mPhone.getServiceState().getDataNetworkType();
+    }
+
+    /**
+     * Returns the data network type
+     */
+    @Override
+    public int getDataNetworkType() {
+        return mPhone.getServiceState().getDataNetworkType();
+    }
+
+    /**
+     * Returns the data network type
+     */
+    @Override
+    public int getVoiceNetworkType() {
+        return mPhone.getServiceState().getVoiceNetworkType();
     }
 
     /**
@@ -840,5 +1040,99 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      */
     public int getLteOnCdmaMode() {
         return mPhone.getLteOnCdmaMode();
+    }
+
+    private String exchangeIccAPDU(int cla, int command,
+            int channel, int p1, int p2, int p3, String data) {
+        if ((Binder.getCallingUid() != Process.SMARTCARD_UID)
+                && (Binder.getCallingUid() != Process.PHONE_UID)) {
+            throw new SecurityException("Only Smartcard API or CwsServiceManager may access UICC");
+        }
+
+        Log.d(LOG_TAG, "> exchangeAPDU " + channel + " " + cla + " " +
+                command + " " + p1 + " " + p2 + " " + p3 + " " + data);
+        IccIoResult response =
+                (IccIoResult)sendRequest(CMD_EXCHANGE_APDU,
+                        new IccAPDUArgument(cla, command, channel, p1, p2, p3, data));
+        Log.d(LOG_TAG, "< exchangeAPDU " + response);
+        String s = Integer.toHexString(
+                (response.sw1 << 8) + response.sw2 + 0x10000).substring(1);
+
+        if (response.payload != null) {
+            s = IccUtils.bytesToHexString(response.payload) + s;
+        }
+
+        return s;
+    }
+
+    public String transmitIccBasicChannel(int cla, int command,
+            int p1, int p2, int p3, String data) {
+        return exchangeIccAPDU(cla, command, 0, p1, p2, p3, data);
+    }
+
+    public String transmitIccLogicalChannel(int cla, int command,
+            int channel, int p1, int p2, int p3, String data) {
+        return exchangeIccAPDU(cla, command, channel, p1, p2, p3, data);
+    }
+
+    public int openIccLogicalChannel(String AID) {
+        if ((Binder.getCallingUid() != Process.SMARTCARD_UID)
+                && (Binder.getCallingUid() != Process.PHONE_UID)) {
+            throw new SecurityException("Only Smartcard API or CwsServiceManager may access UICC");
+        }
+
+        Log.d(LOG_TAG, "> openIccLogicalChannel " + AID);
+        Integer channel = (Integer)sendRequest(CMD_OPEN_CHANNEL, AID);
+        Log.d(LOG_TAG, "< openIccLogicalChannel " + channel);
+        return channel.intValue();
+    }
+
+    public boolean closeIccLogicalChannel(int channel) {
+        if ((Binder.getCallingUid() != Process.SMARTCARD_UID)
+                && (Binder.getCallingUid() != Process.PHONE_UID)) {
+            throw new SecurityException("Only Smartcard API or CwsServiceManager may access UICC");
+        }
+
+        Log.d(LOG_TAG, "> closeIccLogicalChannel " + channel);
+        Integer err = (Integer)sendRequest(CMD_CLOSE_CHANNEL,
+                new Integer(channel));
+        Log.d(LOG_TAG, "< closeIccLogicalChannel " + err);
+        if (err.intValue() == 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public int getLastError() {
+        return lastError;
+    }
+
+    public byte[] transmitIccSimIO(int fileID, int command,
+                                   int p1, int p2, int p3, String filePath) {
+        if (Binder.getCallingUid() != Process.SMARTCARD_UID)
+            throw new SecurityException("Only Smartcard API may access UICC");
+
+        Log.d(LOG_TAG, "Exchange SIM_IO " + fileID + ":" + command + " " +
+                p1 + " " + p2 + " " + p3 + ":" + filePath);
+        IccIoResult response = (IccIoResult)sendRequest(CMD_SIM_IO,
+                new IccAPDUArgument(fileID, command, -1, p1, p2, p3, filePath));
+        Log.d(LOG_TAG, "Exchange SIM_IO [R]" + response);
+
+        byte[] result = null;
+        int length = 2;
+        if (response.payload != null) {
+            length = 2 + response.payload.length;
+            result = new byte[length];
+            System.arraycopy(response.payload, 0, result, 0,
+                    response.payload.length);
+        } else
+            result = new byte[length];
+
+        Log.d(LOG_TAG, "Exchange SIM_IO [L] " + length);
+
+        result[length-1] = (byte)response.sw2;
+        result[length-2] = (byte)response.sw1;
+        return result;
     }
 }

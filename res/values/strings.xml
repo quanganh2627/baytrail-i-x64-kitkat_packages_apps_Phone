@@ -154,6 +154,8 @@
     <string name="unlock_failed">Network unlock request unsuccessful.</string>
     <!-- Success message displayed on SIM Network Depersonalization panel -->
     <string name="unlock_success">Network unlock successful.</string>
+    <!---Message displayed when the device is Network PUK locked -->
+    <string name="personalisation_puklocked">Network PUK Locked</string>
 
     <!-- settings strings -->
 
@@ -362,11 +364,27 @@
     <string name="preferred_network_mode_cdma_only_summary">Preferred network mode: CDMA only</string>
     <!-- Mobile network settings, summary for preferred network mode EvDo only [CHAR LIMIT=100] -->
     <string name="preferred_network_mode_evdo_only_summary">Preferred network mode: EvDo only</string>
-    <!-- Mobile network settings, summary for preferred network mode LTE / CDMA[CHAR LIMIT=100] -->
-    <string name="preferred_network_mode_lte_cdma_summary">Preferred network mode: LTE / CDMA</string>
+    <!-- Mobile network settings, summary for preferred network mode CDMA/EvDo/GSM/WCDMA[CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_cdma_evdo_gsm_wcdma_summary">Preferred network mode: CDMA/EvDo/GSM/WCDMA</string>
+    <!-- Mobile network settings, summary for preferred network mode LTE [CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_lte_summary">Preferred network mode: LTE </string>
+    <!-- Mobile network settings, summary for preferred network mode GSM/WCDMA/LTE [CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_lte_gsm_wcdma_summary">Preferred network mode: GSM/WCDMA/LTE</string>
+    <!-- Mobile network settings, summary for preferred network mode CDMA+LTE/EVDO[CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_lte_cdma_evdo_summary">Preferred network mode: CDMA+LTE/EVDO</string>
+    <!-- Mobile network settings, summary for preferred network mode Global[CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_global_summary">Preferred network mode: Global</string>
+    <!-- Mobile network settings, summary for preferred network mode LTE / WCDMA[CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_lte_wcdma_summary">Preferred network mode: LTE / WCDMA</string>
+
 
     <string-array name="preferred_network_mode_choices">
-        <item>LTE/CDMA</item>
+        <item>LTE / WCDMA</item>
+        <item>LTE</item>
+        <item>Global</item>
+        <item>GSM/WCDMA/LTE</item>
+        <item>CDMA + LTE/EvDo</item>
+        <item>CDMA/EvDo/GSM/WCDMA</item>
         <item>EvDo only</item>
         <item>CDMA w/o EvDo</item>
         <item>CDMA/EvDo auto</item>
@@ -376,6 +394,11 @@
         <item>GSM/WCDMA preferred</item>
     </string-array>
     <string-array name="preferred_network_mode_values"  translatable="false">
+        <item>"12"</item>
+        <item>"11"</item>
+        <item>"10"</item>
+        <item>"9"</item>
+        <item>"8"</item>
         <item>"7"</item>
         <item>"6"</item>
         <item>"5"</item>
@@ -384,15 +407,6 @@
         <item>"2"</item>
         <item>"1"</item>
         <item>"0"</item>
-    </string-array>
-    <!-- Mobile network settings, network mode choices for a device supporting CDMA and LTE [CHAR LIMIT=25] -->
-    <string-array name="preferred_network_mode_choices_lte">
-        <item>LTE/CDMA</item>
-        <item>CDMA</item>
-    </string-array>
-    <string-array name="preferred_network_mode_values_lte" translatable="false">
-        <item>"7"</item>
-        <item>"4"</item>
     </string-array>
     <!-- Mobile network settings screen, data enabling checkbox name -->
     <string name="data_enabled">Data enabled</string>
@@ -904,6 +918,9 @@
     <!-- Text for the onscreen "Audio" button that lets you switch
          between speaker / bluetooth / earpiece [CHAR LIMIT=10] -->
     <string name="onscreenAudioText">Audio</string>
+    <!-- Conformance specific setting -->
+    <!-- Text for the onscreen "End all calls" button [CHAR LIMIT=20] DO NOT TRANSLATE. -->
+    <string name="onscreenEndAllCallsText" translatable="false">End all calls</string>
 
     <!-- Menu item label in SIM Contacts: Import a single contact entry from the SIM card -->
     <string name="importSimEntry">Import</string>
@@ -1281,7 +1298,7 @@
     <!-- Canned response for the "Respond via SMS" feature for incoming calls. [CHAR LIMIT=35] -->
     <string name="respond_via_sms_canned_response_4">Can\'t talk now. Call me later?</string>
     <!-- "Respond via SMS" option that lets you compose a custom response. [CHAR LIMIT=30] -->
-    <string name="respond_via_sms_custom_message">Custom message</string>
+    <string name="respond_via_sms_custom_message">Write your own...</string>
 
     <!-- Title of settings screen for managing the "Respond via SMS" feature. [CHAR LIMIT=30] -->
     <string name="respond_via_sms_setting_title">Quick responses</string>
@@ -1292,6 +1309,9 @@
     <string name="respond_via_sms_setting_summary"></string>
     <!-- Dialog title when changing a string for the "Respond via SMS" feature. [CHAR LIMIT=30] -->
     <string name="respond_via_sms_edittext_dialog_title">Quick response</string>
+    <!-- Menu option in  "Respond via SMS" that allows user to reset the default
+         activity used to handle "Respond via SMS" [CHAR LIMIT=30] -->
+    <string name="respond_via_sms_menu_reset_default_activity">Reset default app</string>
 
     <!-- "Respond via SMS": Confirmation message shown after sending
          a text response. [CHAR LIMIT=40] -->
@@ -1468,8 +1488,77 @@
          [CHAR LIMIT=40] -->
     <string name="dtmf_tone_enable_title">Dial pad touch tones</string>
 
+    <!--  Setting option name to enable or disable dialpad autocomplete functionality
+         [CHAR LIMIT=40] -->
+    <string name="dial_pad_autocomplete">Dial pad autocomplete</string>
+
     <!-- Title for the category "ringtone", which is shown above ringtone and vibration
          related settings.
          [CHAR LIMIT=40] -->
     <string name="preference_category_ringtone">Ringtone &amp; Vibrate</string>
+    <!-- Settings related -->
+    <string name="rat_not_allowed">End your call before switching network modes</string>
+    <!-- IMS Settings -->
+    <string name="app_name">IMS Settings</string>
+    <!-- IMS configuration strings -->
+    <!-- Text of the IMS generic preference category [CHAR LIMIT=NONE] -->
+    <string name="labelImsSettings">IMS Settings</string>
+
+    <!-- Text of the IMS generic preference category [CHAR LIMIT=NONE] -->
+    <string name="preference_category_ims_generic">IMS generic parameters</string>
+    <!-- Text of the XCAP preference category [CHAR LIMIT=NONE] -->
+    <string name="preference_category_xcap">Supplementary Services parameters</string>
+    <!-- Text of the IMS checkbox to enable or disable IMS. [CHAR LIMIT=NONE] -->
+    <string name="ims_enabled_title">Enable IMS</string>
+    <!-- Text of the IMS APN preference. [CHAR LIMIT=NONE] -->
+    <string name="ims_apn_title">IMS APN</string>
+    <!-- Text of the IMS APN preference summary. [CHAR LIMIT=NONE] -->
+    <string name="ims_apn_summary">IMS</string>
+    <!-- Text of the IMS proxy address preference. [CHAR LIMIT=NONE] -->
+    <string name="pcscf_title">IMS Proxy Address</string>
+    <!-- Text of the IMS proxy address preference summary. [CHAR LIMIT=NONE] -->
+    <string name="pcscf_summary">default</string>
+    <!-- Text of the IMS proxy port number. [CHAR LIMIT=NONE] -->
+    <string name="pcscf_port_title">IMS Proxy Port</string>
+    <!-- Text of the IMS proxy port number summary. [CHAR LIMIT=NONE] -->
+    <string name="pcscf_port_summary">default</string>
+    <!-- Text of the XCAP authentication mode. [CHAR LIMIT=NONE] -->
+    <string name="ims_auth_mode_title">IMS Authentication type</string>
+    <!-- Text of the XCAP authentication mode summary. [CHAR LIMIT=NONE] -->
+    <string name="ims_auth_mode_summary">AKA</string>
+    <!-- Text of the Ims phone context. [CHAR LIMIT=NONE] -->
+    <string name="phone_context_title">IMS Phone Context</string>
+    <!-- Text of the Ims phone context summary. [CHAR LIMIT=NONE] -->
+    <string name="phone_context_summary">default</string>
+    <!-- Text of the local breakout . [CHAR LIMIT=NONE] -->
+    <string name="local_breakout_title">Roaming Local Breakout</string>
+    <!-- Text of the Ims phone context summary. [CHAR LIMIT=NONE] -->
+    <string name="local_breakout_summary">default</string>
+    <!-- IMS XCAP configuration strings -->
+    <!-- Text of the XCAP APN preference. [CHAR LIMIT=NONE] -->
+    <string name="xcap_apn_title">XCAP APN</string>
+    <!-- Text of the XCAP APN preference summary. [CHAR LIMIT=NONE] -->
+    <string name="xcap_apn_summary">default</string>
+    <!-- Text of the XCAP root URI preference. [CHAR LIMIT=NONE] -->
+    <string name="xcap_root_uri_title">XCAP Root URI</string>
+    <!-- Text of the XCAP root URI preference summary. [CHAR LIMIT=NONE] -->
+    <string name="xcap_root_uri_summary">default</string>
+    <!-- Text of the XCAP username preference. [CHAR LIMIT=NONE] -->
+    <string name="xcap_username_title">XCAP username</string>
+    <!-- Text of the XCAP username preference summary. [CHAR LIMIT=NONE] -->
+    <string name="xcap_username_summary">default</string>
+    <!-- Text of the XCAP password preference. [CHAR LIMIT=NONE] -->
+    <string name="xcap_password_title">XCAP password</string>
+    <!-- Text of the XCAP password preference summary. [CHAR LIMIT=NONE] -->
+    <string name="xcap_password_summary">default</string>
+
+    <!-- Edit IMS screen menu option to save the user's changes for IMS settings -->
+    <string name="menu_save">Save</string>
+    <!-- Edit IMS screen menu option to discard the user's changes -->
+    <string name="menu_cancel">Discard</string>
+    <!-- IMS error dialog title -->
+    <string name="error_title">Error</string>
+    <!-- IMS error dialog messages: -->
+    <string name="error_ims_apn_empty">The IMS APN field can\'t be empty.</string>
+    <string name="error_ims_pcscf_port">The PCSCF port should be between 1024 and 65535.</string>
 </resources>
