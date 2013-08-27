@@ -168,9 +168,6 @@
     <string name="preferred_network_mode_cdma_only_summary" msgid="1309770926198634150">"Предпочтительная сеть: только CDMA"</string>
     <string name="preferred_network_mode_evdo_only_summary" msgid="8472220691721269155">"Предпочтительная сеть: только EvDo"</string>
     <string name="preferred_network_mode_lte_cdma_summary" msgid="3722647806454528426">"Предпочтительная сеть: LTE или CDMA"</string>
-    <string name="preferred_network_mode_lte_only_summary" msgid="3722647806454528427">"Предпочтительная сеть: только LTE"</string>
-    <string name="preferred_network_mode_lte_wcdma_gsm_summary" msgid="3722647806454528428">"Предпочтительная сеть: LTE/WCDMA/GSM"</string>
-    <string name="preferred_network_mode_lte_wcdma_summary">"Предпочтительная сеть: LTE или WCDMA"</string>
   <string-array name="preferred_network_mode_choices">
     <item msgid="5543794538185064048">"LTE/CDMA"</item>
     <item msgid="3273348576277144124">"Только EvDo"</item>

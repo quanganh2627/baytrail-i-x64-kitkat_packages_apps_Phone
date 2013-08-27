@@ -96,12 +96,8 @@ public class MobileNetworkSettings extends PreferenceActivity
     GsmUmtsOptions mGsmUmtsOptions;
     CdmaOptions mCdmaOptions;
 
-    // GsmUmtsLte options
-    GsmUmtsLteOptions mGsmUmtsLteOptions;
-
     private Preference mClickedPreference;
 
-    private AlertDialog mRoamingDialog;
 
     //This is a method implemented for DialogInterface.OnClickListener.
     //  Used to dismiss the dialogs when they come up.
@@ -160,15 +156,14 @@ public class MobileNetworkSettings extends PreferenceActivity
             if (mButtonDataRoam.isChecked()) {
                 // First confirm with a warning dialog about charges
                 mOkClicked = false;
-                mRoamingDialog = new AlertDialog.Builder(this).setMessage(
+                new AlertDialog.Builder(this).setMessage(
                         getResources().getString(R.string.roaming_warning))
                         .setTitle(android.R.string.dialog_alert_title)
                         .setIconAttribute(android.R.attr.alertDialogIcon)
                         .setPositiveButton(android.R.string.yes, this)
                         .setNegativeButton(android.R.string.no, this)
-                        .create();
-                mRoamingDialog.setOnDismissListener(this);
-                mRoamingDialog.show();
+                        .show()
+                        .setOnDismissListener(this);
             } else {
                 mPhone.setDataRoamingEnabled(false);
             }
@@ -228,18 +223,7 @@ public class MobileNetworkSettings extends PreferenceActivity
         mLteDataServicePref = prefSet.findPreference(BUTTON_CDMA_LTE_DATA_SERVICE_KEY);
 
         boolean isLteOnCdma = mPhone.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE;
-        if (getResources().getBoolean(R.bool.lte_wcdma_phone) == true) {
-            // set the listener for the mButtonPreferredNetworkMode list preference so we can issue
-            // change Preferred Network Mode.
-            mButtonPreferredNetworkMode.setOnPreferenceChangeListener(this);
-
-            // Get the networkMode from Settings.System and displays it
-            int settingsNetworkMode = android.provider.Settings.Global.getInt(mPhone.getContext().
-                    getContentResolver(),android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
-                    preferredNetworkMode);
-            mButtonPreferredNetworkMode.setValue(Integer.toString(settingsNetworkMode));
-            mGsmUmtsLteOptions = new GsmUmtsLteOptions(this, prefSet);
-        } else if (getResources().getBoolean(R.bool.world_phone) == true) {
+        if (getResources().getBoolean(R.bool.world_phone) == true) {
             // set the listener for the mButtonPreferredNetworkMode list preference so we can issue
             // change Preferred Network Mode.
             mButtonPreferredNetworkMode.setOnPreferenceChangeListener(this);
@@ -328,11 +312,6 @@ public class MobileNetworkSettings extends PreferenceActivity
         mDataUsageListener.pause();
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
     /**
      * Implemented to support onPreferenceChangeListener to look for preference
      * changes specifically on CLIR.
@@ -378,17 +357,16 @@ public class MobileNetworkSettings extends PreferenceActivity
                     case Phone.NT_MODE_WCDMA_PREF:
                         modemNetworkMode = Phone.NT_MODE_WCDMA_PREF;
                         break;
-                    case Phone.NT_MODE_LTE_GSM_WCDMA:
-                        modemNetworkMode = Phone.NT_MODE_LTE_GSM_WCDMA;
-                        break;
-                    case Phone.NT_MODE_LTE_ONLY:
-                        modemNetworkMode = Phone.NT_MODE_LTE_ONLY;
-                        break;
-                    case Phone.NT_MODE_LTE_WCDMA:
-                        modemNetworkMode = Phone.NT_MODE_LTE_WCDMA;
-                        break;
                     default:
                         modemNetworkMode = Phone.PREFERRED_NT_MODE;
+                }
+
+                // If button has no valid selection && setting is LTE ONLY
+                // mode, let the setting stay in LTE ONLY mode. UI is not
+                // supported but LTE ONLY mode could be used in testing.
+                if ((modemNetworkMode == Phone.PREFERRED_NT_MODE) &&
+                    (settingsNetworkMode == Phone.NT_MODE_LTE_ONLY)) {
+                    return true;
                 }
 
                 UpdatePreferredNetworkModeSummary(buttonNetworkMode);
@@ -453,10 +431,7 @@ public class MobileNetworkSettings extends PreferenceActivity
                         modemNetworkMode == Phone.NT_MODE_CDMA ||
                         modemNetworkMode == Phone.NT_MODE_CDMA_NO_EVDO ||
                         modemNetworkMode == Phone.NT_MODE_EVDO_NO_CDMA ||
-                        modemNetworkMode == Phone.NT_MODE_GLOBAL ||
-                        modemNetworkMode == Phone.NT_MODE_LTE_ONLY ||
-                        modemNetworkMode == Phone.NT_MODE_LTE_WCDMA ||
-                        modemNetworkMode == Phone.NT_MODE_LTE_GSM_WCDMA ) {
+                        modemNetworkMode == Phone.NT_MODE_GLOBAL ) {
                     if (DBG) {
                         log("handleGetPreferredNetworkTypeResponse: if 1: modemNetworkMode = " +
                                 modemNetworkMode);
@@ -485,6 +460,9 @@ public class MobileNetworkSettings extends PreferenceActivity
                     UpdatePreferredNetworkModeSummary(modemNetworkMode);
                     // changes the mButtonPreferredNetworkMode accordingly to modemNetworkMode
                     mButtonPreferredNetworkMode.setValue(Integer.toString(modemNetworkMode));
+                } else if (modemNetworkMode == Phone.NT_MODE_LTE_ONLY) {
+                    // LTE Only mode not yet supported on UI, but could be used for testing
+                    if (DBG) log("handleGetPreferredNetworkTypeResponse: lte only: no action");
                 } else {
                     if (DBG) log("handleGetPreferredNetworkTypeResponse: else: reset to default");
                     resetNetworkModeToDefault();
@@ -557,18 +535,6 @@ public class MobileNetworkSettings extends PreferenceActivity
             case Phone.NT_MODE_EVDO_NO_CDMA:
                 mButtonPreferredNetworkMode.setSummary(
                         R.string.preferred_network_mode_evdo_only_summary);
-                break;
-            case Phone.NT_MODE_LTE_ONLY:
-                mButtonPreferredNetworkMode.setSummary(
-                        R.string.preferred_network_mode_lte_only_summary);
-                break;
-            case Phone.NT_MODE_LTE_GSM_WCDMA:
-                mButtonPreferredNetworkMode.setSummary(
-                        R.string.preferred_network_mode_lte_wcdma_gsm_summary);
-                break;
-            case Phone.NT_MODE_LTE_WCDMA:
-                mButtonPreferredNetworkMode.setSummary(
-                        R.string.preferred_network_mode_lte_wcdma_summary);
                 break;
             case Phone.NT_MODE_GLOBAL:
             default:
