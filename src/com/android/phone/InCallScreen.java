@@ -261,6 +261,7 @@ public class InCallScreen extends Activity
         EARPIECE,   // Handset earpiece (or wired headset, if connected)
     }
 
+    private boolean mIsIncomingCallAnswered = false;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -1629,6 +1630,10 @@ public class InCallScreen extends Activity
     private void onPhoneStateChanged(AsyncResult r) {
         PhoneConstants.State state = mCM.getState();
         if (DBG) log("onPhoneStateChanged: current state = " + state);
+
+        if (state != PhoneConstants.State.RINGING) {
+            mIsIncomingCallAnswered = false;
+        }
 
         // There's nothing to do here if we're not the foreground activity.
         // (When we *do* eventually come to the foreground, we'll do a
@@ -3535,6 +3540,8 @@ public class InCallScreen extends Activity
 
             // Call origin is valid only with outgoing calls. Disable it on incoming calls.
             mApp.setLatestActiveCallOrigin(null);
+
+            mIsIncomingCallAnswered = true;
         }
     }
 
@@ -4620,5 +4627,12 @@ public class InCallScreen extends Activity
      */
     public boolean isQuickResponseDialogShowing() {
         return mRespondViaSmsManager != null && mRespondViaSmsManager.isShowingPopup();
+    }
+
+    /**
+     * Indicates whether or not the incoming call is answered by user.
+     */
+    public boolean isIncomingCallAnswered() {
+        return mIsIncomingCallAnswered;
     }
 }
