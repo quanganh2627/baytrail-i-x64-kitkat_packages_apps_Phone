@@ -344,8 +344,9 @@ public class PhoneGlobals extends ContextWrapper
 
                 case EVENT_WIRED_HEADSET_PLUG:
                     // Since the presence of a wired headset or bluetooth affects the
-                    // speakerphone, update the "speaker" state. Here, we do this on the
-                    // wired headset connect / disconnect events on EVENT_WIRED_HEADSET_PLUG.
+                    // speakerphone, update the "speaker" state.  We ONLY want to do
+                    // this on the wired headset connect / disconnect events for now
+                    // though, so we're only triggering on EVENT_WIRED_HEADSET_PLUG.
 
                     phoneState = mCM.getState();
                     // Do not change speaker state if phone is not off hook
@@ -1443,15 +1444,6 @@ public class PhoneGlobals extends ContextWrapper
 
         // Update the Proximity sensor based on Bluetooth audio state
         updateProximitySensorMode(mCM.getState());
-
-        // Since the presence of bluetooth device affects the speakerphone,
-        // update the speaker state when in call.
-        if (mCM.getState() == PhoneConstants.State.OFFHOOK && isBluetoothHeadsetAudioOn()) {
-            if (DBG) Log.d (LOG_TAG, "- turning off speaker in-call due to BT connection");
-            // if the state is "connected", force the speaker off without
-            // storing the state.
-            PhoneUtils.turnOnSpeaker(getApplicationContext(), false, false);
-        }
     }
 
     /**
