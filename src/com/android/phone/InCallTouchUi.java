@@ -302,7 +302,7 @@ public class InCallTouchUi extends FrameLayout
             throw new IllegalStateException(
                 "'Incoming' and 'in-call' touch controls visible at the same time!");
         }
-        if (mShowInCallControlsDuringHidingAnimation) {
+        if (mShowInCallControlsDuringHidingAnimation || mInCallScreen.isIncomingCallAnswered()) {
             if (DBG) {
                 log("- updateState: FORCE showing in-call controls during incoming call widget"
                         + " being hidden with animation");
@@ -322,7 +322,7 @@ public class InCallTouchUi extends FrameLayout
             mInCallControls.setVisibility(View.GONE);
         }
 
-        if (showIncomingCallControls) {
+        if (showIncomingCallControls && !mInCallScreen.isIncomingCallAnswered()) {
             if (DBG) log("- updateState: showing incoming call widget...");
             showIncomingCallWidget(ringingCall);
 
