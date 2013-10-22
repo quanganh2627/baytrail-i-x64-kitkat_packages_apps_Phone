@@ -1374,6 +1374,7 @@ public class InCallScreen extends Activity
                 internalSwapCalls();
             }
         } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                 || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
             if (hasRingingCall) {
                 // If an incoming call is ringing, the CALL button is actually

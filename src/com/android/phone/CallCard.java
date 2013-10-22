@@ -377,6 +377,7 @@ public class CallCard extends LinearLayout
                 displaySecondaryCallStatus(cm, bgCall);
             }
         } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                 || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
             displaySecondaryCallStatus(cm, bgCall);
         }
