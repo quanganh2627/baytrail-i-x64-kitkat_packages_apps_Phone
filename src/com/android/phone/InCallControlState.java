@@ -58,7 +58,6 @@ public class InCallControlState {
     public boolean canAddCall;
     //
     public boolean canEndCall;
-    public boolean canEndAllCalls;
     //
     public boolean canSwap;
     public boolean canMerge;
@@ -128,11 +127,6 @@ public class InCallControlState {
         // UI glitch when the InCallTouchUi widget first appears, immediately after
         // answering an incoming call.
         canEndCall = (mCM.hasActiveFgCall() || mCM.hasActiveRingingCall() || mCM.hasActiveBgCall());
-
-        canEndAllCalls = (fgCallState == Call.State.ACTIVE
-                || fgCallState == Call.State.DIALING
-                || fgCallState == Call.State.ALERTING)
-                && hasHoldingCall;
 
         // Swap / merge calls
         canSwap = PhoneUtils.okToSwapCalls(mCM);
@@ -219,7 +213,6 @@ public class InCallControlState {
         log("  manageConferenceEnabled: " + manageConferenceEnabled);
         log("  canAddCall: " + canAddCall);
         log("  canEndCall: " + canEndCall);
-        log("  canEndAllCalls: " + canEndAllCalls);
         log("  canSwap: " + canSwap);
         log("  canMerge: " + canMerge);
         log("  bluetoothEnabled: " + bluetoothEnabled);
