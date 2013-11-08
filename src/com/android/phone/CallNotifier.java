@@ -850,6 +850,7 @@ public class CallNotifier extends Handler
         }
 
         if ((fgPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM)
+                || (fgPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS)
                 || (fgPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_SIP)) {
             Call.State callState = mCM.getActiveFgCallState();
             if (!callState.isDialing()) {
@@ -1380,6 +1381,7 @@ public class CallNotifier extends Handler
                         toneVolume = TONE_RELATIVE_VOLUME_LOPRI;
                         toneLengthMillis = 1000;
                     } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
+                            || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                             || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                         toneType = ToneGenerator.TONE_SUP_BUSY;
                         toneVolume = TONE_RELATIVE_VOLUME_HIPRI;
@@ -1918,6 +1920,8 @@ public class CallNotifier extends Handler
         boolean playTone = (Boolean)(r.result);
 
         if (playTone == true) {
+            if (VDBG) log("Starting ringback tone, isDialing = "
+                    + mCM.getActiveFgCallState().isDialing());
             // Only play when foreground call is in DIALING or ALERTING.
             // to prevent a late coming playtone after ALERTING.
             // Don't play ringback tone if it is in play, otherwise it will cut
@@ -1928,6 +1932,7 @@ public class CallNotifier extends Handler
                 mInCallRingbackTonePlayer.start();
             }
         } else {
+            if (VDBG) log("Stopping ringback tone... ");
             if (mInCallRingbackTonePlayer != null) {
                 mInCallRingbackTonePlayer.stopTone();
                 mInCallRingbackTonePlayer = null;
