@@ -92,12 +92,8 @@ public class MobileNetworkSettings extends PreferenceActivity
     GsmUmtsOptions mGsmUmtsOptions;
     CdmaOptions mCdmaOptions;
 
-    // GsmUmtsLte options
-    GsmUmtsLteOptions mGsmUmtsLteOptions;
-
     private Preference mClickedPreference;
 
-    private AlertDialog mRoamingDialog;
 
     //This is a method implemented for DialogInterface.OnClickListener.
     //  Used to dismiss the dialogs when they come up.
@@ -156,15 +152,14 @@ public class MobileNetworkSettings extends PreferenceActivity
             if (mButtonDataRoam.isChecked()) {
                 // First confirm with a warning dialog about charges
                 mOkClicked = false;
-                mRoamingDialog = new AlertDialog.Builder(this).setMessage(
+                new AlertDialog.Builder(this).setMessage(
                         getResources().getString(R.string.roaming_warning))
                         .setTitle(android.R.string.dialog_alert_title)
                         .setIconAttribute(android.R.attr.alertDialogIcon)
                         .setPositiveButton(android.R.string.yes, this)
                         .setNegativeButton(android.R.string.no, this)
-                        .create();
-                mRoamingDialog.setOnDismissListener(this);
-                mRoamingDialog.show();
+                        .show()
+                        .setOnDismissListener(this);
             } else {
                 mPhone.setDataRoamingEnabled(false);
             }
@@ -223,18 +218,7 @@ public class MobileNetworkSettings extends PreferenceActivity
         mLteDataServicePref = prefSet.findPreference(BUTTON_CDMA_LTE_DATA_SERVICE_KEY);
 
         boolean isLteOnCdma = mPhone.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE;
-        if (getResources().getBoolean(R.bool.lte_wcdma_phone) == true) {
-            // set the listener for the mButtonPreferredNetworkMode list preference so we can issue
-            // change Preferred Network Mode.
-            mButtonPreferredNetworkMode.setOnPreferenceChangeListener(this);
-
-            // Get the networkMode from Settings.System and displays it
-            int settingsNetworkMode = android.provider.Settings.Global.getInt(mPhone.getContext().
-                    getContentResolver(),android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
-                    preferredNetworkMode);
-            mButtonPreferredNetworkMode.setValue(Integer.toString(settingsNetworkMode));
-            mGsmUmtsLteOptions = new GsmUmtsLteOptions(this, prefSet);
-        } else if (getResources().getBoolean(R.bool.world_phone) == true) {
+        if (getResources().getBoolean(R.bool.world_phone) == true) {
             // set the listener for the mButtonPreferredNetworkMode list preference so we can issue
             // change Preferred Network Mode.
             mButtonPreferredNetworkMode.setOnPreferenceChangeListener(this);
@@ -312,11 +296,6 @@ public class MobileNetworkSettings extends PreferenceActivity
     @Override
     protected void onPause() {
         super.onPause();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
     }
 
     /**

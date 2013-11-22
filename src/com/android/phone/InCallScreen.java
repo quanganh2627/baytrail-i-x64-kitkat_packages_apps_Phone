@@ -261,7 +261,6 @@ public class InCallScreen extends Activity
         EARPIECE,   // Handset earpiece (or wired headset, if connected)
     }
 
-    private boolean mIsIncomingCallAnswered = false;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -452,6 +451,7 @@ public class InCallScreen extends Activity
         }
 
         mApp = PhoneGlobals.getInstance();
+        mApp.setInCallScreenInstance(this);
 
         // set this flag so this activity will stay in front of the keyguard
         int flags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
@@ -501,8 +501,6 @@ public class InCallScreen extends Activity
         initInCallScreen();
 
         registerForPhoneStates();
-
-        mApp.setInCallScreenInstance(this);
 
         // No need to change wake state here; that happens in onResume() when we
         // are actually displayed.
@@ -1374,7 +1372,6 @@ public class InCallScreen extends Activity
                 internalSwapCalls();
             }
         } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
-                || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                 || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
             if (hasRingingCall) {
                 // If an incoming call is ringing, the CALL button is actually
@@ -1631,10 +1628,6 @@ public class InCallScreen extends Activity
     private void onPhoneStateChanged(AsyncResult r) {
         PhoneConstants.State state = mCM.getState();
         if (DBG) log("onPhoneStateChanged: current state = " + state);
-
-        if (state != PhoneConstants.State.RINGING) {
-            mIsIncomingCallAnswered = false;
-        }
 
         // There's nothing to do here if we're not the foreground activity.
         // (When we *do* eventually come to the foreground, we'll do a
@@ -2429,7 +2422,6 @@ public class InCallScreen extends Activity
                     showWaitPromptDialog(fgLatestConnection, postDialStr);
                 }
             } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
-                    || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                     || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                 for (Connection cn : fgConnections) {
                     if ((cn != null) && (cn.getPostDialState() == Connection.PostDialState.WAIT)) {
@@ -3506,8 +3498,7 @@ public class InCallScreen extends Activity
                 } else {
                     PhoneUtils.answerCall(ringing);
                 }
-            } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM) ||
-                      (phoneType == PhoneConstants.PHONE_TYPE_IMS))  {
+            } else if (phoneType == PhoneConstants.PHONE_TYPE_GSM) {
                 if (DBG) log("internalAnswerCall: answering (GSM)...");
                 // GSM: this is usually just a wrapper around
                 // PhoneUtils.answerCall(), *but* we also need to do
@@ -3537,8 +3528,6 @@ public class InCallScreen extends Activity
 
             // Call origin is valid only with outgoing calls. Disable it on incoming calls.
             mApp.setLatestActiveCallOrigin(null);
-
-            mIsIncomingCallAnswered = true;
         }
     }
 
@@ -3974,14 +3963,9 @@ public class InCallScreen extends Activity
         // We can also dial while in ALERTING state because there are
         // some connections that never update to an ACTIVE state (no
         // indication from the network).
-
-        // In-band tones are available even before the ALERTING state.
-        // User should be provided with the option of skipping the
-        // in-band tones. So, Dialpad should be shown even in the
-        // DIALING state.
         boolean canDial =
-            (fgCallState == Call.State.DIALING || fgCallState == Call.State.ACTIVE
-            || fgCallState == Call.State.ALERTING) && !hasRingingCall
+            (fgCallState == Call.State.ACTIVE || fgCallState == Call.State.ALERTING)
+            && !hasRingingCall
             && (mApp.inCallUiState.inCallScreenMode != InCallScreenMode.MANAGE_CONFERENCE);
 
         if (VDBG) log ("[okToDialDTMFTones] foreground state: " + fgCallState +
@@ -4624,12 +4608,5 @@ public class InCallScreen extends Activity
      */
     public boolean isQuickResponseDialogShowing() {
         return mRespondViaSmsManager != null && mRespondViaSmsManager.isShowingPopup();
-    }
-
-    /**
-     * Indicates whether or not the incoming call is answered by user.
-     */
-    public boolean isIncomingCallAnswered() {
-        return mIsIncomingCallAnswered;
     }
 }

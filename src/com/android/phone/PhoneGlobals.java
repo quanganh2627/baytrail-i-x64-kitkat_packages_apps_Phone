@@ -34,7 +34,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
-import android.content.res.Resources;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncResult;
@@ -72,9 +71,6 @@ import com.android.internal.telephony.cdma.TtyIntent;
 import com.android.phone.common.CallLogAsync;
 import com.android.phone.OtaUtils.CdmaOtaScreenState;
 import com.android.server.sip.SipService;
-
-import dalvik.system.DexClassLoader;
-import java.lang.reflect.Constructor;
 
 /**
  * Global state for the telephony subsystem when running in the primary
@@ -119,9 +115,6 @@ public class PhoneGlobals extends ContextWrapper
     private static final int EVENT_TTY_MODE_GET = 15;
     private static final int EVENT_TTY_MODE_SET = 16;
     private static final int EVENT_START_SIP_SERVICE = 17;
-
-    private static final int MIC_HEADSET_DEVICE = 0;
-    private static final int MIC_HEADPHONE_DEVICE = 1;
 
     // The MMI codes are also used by the InCallScreen.
     public static final int MMI_INITIATE = 51;
@@ -228,10 +221,6 @@ public class PhoneGlobals extends ContextWrapper
     private int mOrientation = AccelerometerListener.ORIENTATION_UNKNOWN;
 
     private UpdateLock mUpdateLock;
-
-    // headset/headphone device state
-    private boolean mHeadsetDev = false;
-    private boolean mHeadphoneDev = false;
 
     // Broadcast receiver for various intent broadcasts (see onCreate())
     private final BroadcastReceiver mReceiver = new PhoneAppBroadcastReceiver();
@@ -344,8 +333,9 @@ public class PhoneGlobals extends ContextWrapper
 
                 case EVENT_WIRED_HEADSET_PLUG:
                     // Since the presence of a wired headset or bluetooth affects the
-                    // speakerphone, update the "speaker" state. Here, we do this on the
-                    // wired headset connect / disconnect events on EVENT_WIRED_HEADSET_PLUG.
+                    // speakerphone, update the "speaker" state.  We ONLY want to do
+                    // this on the wired headset connect / disconnect events for now
+                    // though, so we're only triggering on EVENT_WIRED_HEADSET_PLUG.
 
                     phoneState = mCM.getState();
                     // Do not change speaker state if phone is not off hook
@@ -470,57 +460,6 @@ public class PhoneGlobals extends ContextWrapper
             notificationMgr = NotificationMgr.init(this);
 
             phoneMgr = PhoneInterfaceManager.init(this, phone);
-
-            try {
-                if (getResources().getBoolean(R.bool.config_usage_oem_hooks_supported)) {
-                    if (DBG) {
-                        Log.d(LOG_TAG, "**********************************"
-                                + " OEMHookInterfaceCreator loading *****************"
-                                + "*********************************************");
-                    }
-                    DexClassLoader classLoader = new DexClassLoader(
-                            getResources().getString(R.string.config_oem_hook_jar_file),
-                            new ContextWrapper(phone.getContext()).getCacheDir().getAbsolutePath(),
-                            null, ClassLoader.getSystemClassLoader());
-                    classLoader.loadClass( getResources().getString(
-                            R.string.config_oem_hook_class_name)).getConstructor().newInstance();
-                } else {
-                    if (DBG) Log.d(LOG_TAG, "#######################################"
-                            + " NO OEM Hooks ############################################");
-                }
-            } catch (Resources.NotFoundException ex) {
-                Log.e(LOG_TAG, "Resource reading Failed!");
-            } catch (ClassNotFoundException ex) {
-                Log.e(LOG_TAG, "OEM Hook class loading failed");
-            } catch (Exception ex) {
-                Log.e(LOG_TAG, "OEM Hook class creation Failed!");
-            }
-
-            try {
-                if (getResources().getBoolean(R.bool.config_usage_sar_manager_supported)) {
-                    if (DBG) {
-                        Log.d(LOG_TAG, "**********************************"
-                                + " SarManagerCreator loading *****************"
-                                + "*********************************************");
-                    }
-                    DexClassLoader classLoader = new DexClassLoader(
-                            getResources().getString(R.string.config_sar_manager_jar_file),
-                            new ContextWrapper(phone.getContext()).getCacheDir().getAbsolutePath(),
-                            null, ClassLoader.getSystemClassLoader());
-                    classLoader.loadClass( getResources().getString(
-                            R.string.config_sar_manager_class_name)).getConstructor(
-                              DexClassLoader.class).newInstance(classLoader);
-                } else {
-                    if (DBG) Log.d(LOG_TAG, "#######################################"
-                            + " NO SAR Manager ############################################");
-                }
-            } catch (Resources.NotFoundException ex) {
-                Log.e(LOG_TAG, "Resource reading Failed!");
-            } catch (ClassNotFoundException ex) {
-                Log.e(LOG_TAG, "SAR Manager class loading failed");
-            } catch (Exception ex) {
-                Log.e(LOG_TAG, "SAR Manager class creation Failed!");
-            }
 
             mHandler.sendEmptyMessage(EVENT_START_SIP_SERVICE);
 
@@ -1443,15 +1382,6 @@ public class PhoneGlobals extends ContextWrapper
 
         // Update the Proximity sensor based on Bluetooth audio state
         updateProximitySensorMode(mCM.getState());
-
-        // Since the presence of bluetooth device affects the speakerphone,
-        // update the speaker state when in call.
-        if (mCM.getState() == PhoneConstants.State.OFFHOOK && isBluetoothHeadsetAudioOn()) {
-            if (DBG) Log.d (LOG_TAG, "- turning off speaker in-call due to BT connection");
-            // if the state is "connected", force the speaker off without
-            // storing the state.
-            PhoneUtils.turnOnSpeaker(getApplicationContext(), false, false);
-        }
     }
 
     /**
@@ -1544,19 +1474,7 @@ public class PhoneGlobals extends ContextWrapper
                 if (VDBG) Log.d(LOG_TAG, "mReceiver: ACTION_HEADSET_PLUG");
                 if (VDBG) Log.d(LOG_TAG, "    state: " + intent.getIntExtra("state", 0));
                 if (VDBG) Log.d(LOG_TAG, "    name: " + intent.getStringExtra("name"));
-                // The intent elements definitin from Google:
-                // state:        0: pull out          1: plugin
-                // microphone:   0: headset device    1: microphone device
-                boolean state = (intent.getIntExtra("state", 0) == 1);
-                int micDev = intent.getIntExtra("microphone", 0);
-                if (micDev == MIC_HEADSET_DEVICE)
-                    mHeadsetDev = state;
-                else if (micDev == MIC_HEADPHONE_DEVICE)
-                    mHeadphoneDev = state;
-                else
-                    Log.e(LOG_TAG, "Undefined ACTION_HEADSET_PLUG device!");
-
-                mIsHeadsetPlugged = mHeadsetDev || mHeadphoneDev;
+                mIsHeadsetPlugged = (intent.getIntExtra("state", 0) == 1);
                 mHandler.sendMessage(mHandler.obtainMessage(EVENT_WIRED_HEADSET_PLUG, 0));
             } else if ((action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) &&
                     (mPUKEntryActivity != null)) {

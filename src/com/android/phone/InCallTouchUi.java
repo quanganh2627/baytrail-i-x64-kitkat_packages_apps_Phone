@@ -256,6 +256,20 @@ public class InCallTouchUi extends FrameLayout
                 showIncomingCallControls = true;
             }
 
+            // Ugly hack to cover up slow response from the radio:
+            // if we get an updateState() call immediately after answering/rejecting a call
+            // (via onTrigger()), *don't* show the incoming call
+            // UI even if the phone is still in the RINGING state.
+            // This covers up a slow response from the radio for some actions.
+            // To detect that situation, we are using "500 msec" heuristics.
+            //
+            // Watch out: we should *not* rely on this behavior when "instant text response" action
+            // has been chosen. See also onTrigger() for why.
+            long now = SystemClock.uptimeMillis();
+            if (now < mLastIncomingCallActionTime + 500) {
+                log("updateState: Too soon after last action; not drawing!");
+                showIncomingCallControls = false;
+            }
 
             // b/6765896
             // If the glowview triggers two hits of the respond-via-sms gadget in
@@ -291,7 +305,7 @@ public class InCallTouchUi extends FrameLayout
             throw new IllegalStateException(
                 "'Incoming' and 'in-call' touch controls visible at the same time!");
         }
-        if (mShowInCallControlsDuringHidingAnimation || mInCallScreen.isIncomingCallAnswered()) {
+        if (mShowInCallControlsDuringHidingAnimation) {
             if (DBG) {
                 log("- updateState: FORCE showing in-call controls during incoming call widget"
                         + " being hidden with animation");
@@ -311,7 +325,7 @@ public class InCallTouchUi extends FrameLayout
             mInCallControls.setVisibility(View.GONE);
         }
 
-        if (showIncomingCallControls && !mInCallScreen.isIncomingCallAnswered()) {
+        if (showIncomingCallControls) {
             if (DBG) log("- updateState: showing incoming call widget...");
             showIncomingCallWidget(ringingCall);
 
@@ -473,7 +487,6 @@ public class InCallTouchUi extends FrameLayout
                 // we always set the mMergeButton to GONE
                 mMergeButton.setVisibility(View.GONE);
             } else if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
-                    || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                     || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                 mMergeButton.setVisibility(View.VISIBLE);
                 mMergeButton.setEnabled(true);
@@ -495,7 +508,6 @@ public class InCallTouchUi extends FrameLayout
         }
         if (inCallControlState.canAddCall && inCallControlState.canMerge) {
             if ((phoneType == PhoneConstants.PHONE_TYPE_GSM)
-                    || (phoneType == PhoneConstants.PHONE_TYPE_IMS)
                     || (phoneType == PhoneConstants.PHONE_TYPE_SIP)) {
                 // Uh oh, the InCallControlState thinks that "Add" *and* "Merge"
                 // should both be available right now.  This *should* never

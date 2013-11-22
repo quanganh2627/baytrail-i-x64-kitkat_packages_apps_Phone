@@ -1109,8 +1109,7 @@ public class DTMFTwelveKeyDialer implements View.OnTouchListener, View.OnKeyList
             } else {
                 return false;
             }
-        } else if ((phoneType == PhoneConstants.PHONE_TYPE_SIP)
-                || (phoneType == PhoneConstants.PHONE_TYPE_IMS)) {
+        } else if (phoneType == PhoneConstants.PHONE_TYPE_SIP) {
             return false;
         } else {
             throw new IllegalStateException("Unexpected phone type: " + phoneType);
